@@ -4,81 +4,82 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestSaveAttachment(t *testing.T) {
-	dir := t.TempDir()
-	dest := filepath.Join(dir, "test.pdf")
+var _ = Describe("Lambada", func() {
 
-	content := "fake pdf content"
-	err := saveAttachment(strings.NewReader(content), dest)
-	if err != nil {
-		t.Fatalf("saveAttachment returned error: %v", err)
-	}
+	Describe("saveAttachment", func() {
+		Context("with a valid path", func() {
+			It("writes the content to disk", func() {
+				dir := GinkgoT().TempDir()
+				dest := filepath.Join(dir, "test.pdf")
+				content := "fake pdf content"
 
-	data, err := os.ReadFile(dest)
-	if err != nil {
-		t.Fatalf("could not read saved file: %v", err)
-	}
-	if string(data) != content {
-		t.Errorf("expected %q, got %q", content, string(data))
-	}
-}
+				Expect(saveAttachment(strings.NewReader(content), dest)).To(Succeed())
 
-func TestSaveAttachmentBadPath(t *testing.T) {
-	err := saveAttachment(strings.NewReader("data"), "/nonexistent/dir/file.pdf")
-	if err == nil {
-		t.Error("expected error for bad path, got nil")
-	}
-}
+				data, err := os.ReadFile(dest)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(data)).To(Equal(content))
+			})
+		})
 
-func TestCleanupOldFiles_KeepsNewFile(t *testing.T) {
-	dir := t.TempDir()
-	attachmentDir = dir
+		Context("with an invalid path", func() {
+			It("returns an error", func() {
+				err := saveAttachment(strings.NewReader("data"), "/nonexistent/dir/file.pdf")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
 
-	path := filepath.Join(dir, "1234567890.pdf")
-	os.WriteFile(path, []byte("data"), 0644)
+	Describe("cleanupOldFiles", func() {
+		var dir string
 
-	cleanupOldFiles()
+		BeforeEach(func() {
+			dir = GinkgoT().TempDir()
+			attachmentDir = dir
+		})
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Error("expected new file to be kept, but it was deleted")
-	}
-}
+		Context("with a file created right now", func() {
+			It("keeps the file", func() {
+				path := filepath.Join(dir, "1234567890.pdf")
+				Expect(os.WriteFile(path, []byte("data"), 0644)).To(Succeed())
 
-func TestCleanupOldFiles_DeletesOldFile(t *testing.T) {
-	dir := t.TempDir()
-	attachmentDir = dir
+				cleanupOldFiles()
 
-	path := filepath.Join(dir, "1234567890.pdf")
-	os.WriteFile(path, []byte("data"), 0644)
+				Expect(path).To(BeAnExistingFile())
+			})
+		})
 
-	// Wind back the mtime by 25 hours
-	old := time.Now().Add(-25 * time.Hour)
-	os.Chtimes(path, old, old)
+		Context("with a file created yesterday", func() {
+			It("deletes the file", func() {
+				path := filepath.Join(dir, "1234567890.pdf")
+				Expect(os.WriteFile(path, []byte("data"), 0644)).To(Succeed())
 
-	cleanupOldFiles()
+				old := time.Now().Add(-25 * time.Hour)
+				Expect(os.Chtimes(path, old, old)).To(Succeed())
 
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Error("expected old file to be deleted, but it still exists")
-	}
-}
+				cleanupOldFiles()
 
-func TestCleanupOldFiles_SkipsDirectories(t *testing.T) {
-	dir := t.TempDir()
-	attachmentDir = dir
+				Expect(path).NotTo(BeAnExistingFile())
+			})
+		})
 
-	subdir := filepath.Join(dir, "subdir")
-	os.Mkdir(subdir, 0755)
+		Context("with a subdirectory", func() {
+			It("skips directories", func() {
+				subdir := filepath.Join(dir, "subdir")
+				Expect(os.Mkdir(subdir, 0755)).To(Succeed())
 
-	old := time.Now().Add(-25 * time.Hour)
-	os.Chtimes(subdir, old, old)
+				old := time.Now().Add(-25 * time.Hour)
+				Expect(os.Chtimes(subdir, old, old)).To(Succeed())
 
-	cleanupOldFiles() // should not attempt to remove the subdir
+				cleanupOldFiles()
 
-	if _, err := os.Stat(subdir); os.IsNotExist(err) {
-		t.Error("expected subdirectory to be kept, but it was deleted")
-	}
-}
+				Expect(subdir).To(BeADirectory())
+			})
+		})
+	})
+})
