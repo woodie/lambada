@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -17,10 +18,9 @@ import (
 
 const (
 	attachmentDir = "./attachments"
-	listenAddr    = "0.0.0.0:25"
+	listenAddr    = "0.0.0.0:2525"
 )
 
-// Backend implements the SMTP server backend.
 type Backend struct{}
 
 func (b *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
@@ -28,7 +28,6 @@ func (b *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &Session{}, nil
 }
 
-// Session holds per-connection state.
 type Session struct {
 	from string
 	to   []string
@@ -54,8 +53,7 @@ func (s *Session) Data(r io.Reader) error {
 
 	log.Printf("Receiving message from %s (subject: %q)", s.from, msg.Header.Get("Subject"))
 
-	contentType := msg.Header.Get("Content-Type")
-	mediaType, params, err := mime.ParseMediaType(contentType)
+	mediaType, params, err := mime.ParseMediaType(msg.Header.Get("Content-Type"))
 	if err != nil {
 		log.Printf("Failed to parse Content-Type: %v", err)
 		return nil
@@ -83,21 +81,18 @@ func (s *Session) Data(r io.Reader) error {
 			continue
 		}
 
-		filename := dispParams["filename"]
-		if filename == "" {
-			filename = fmt.Sprintf("attachment-%d", time.Now().UnixNano())
-		}
-		filename = filepath.Base(filename) // strip any path components
-
+		// Ignore the scanner's filename; use epoch time + original extension
+		ext := filepath.Ext(dispParams["filename"])
+		filename := fmt.Sprintf("%d%s", time.Now().Unix(), ext)
 		destPath := filepath.Join(attachmentDir, filename)
-		if _, statErr := os.Stat(destPath); statErr == nil {
-			ext := filepath.Ext(filename)
-			base := strings.TrimSuffix(filename, ext)
-			destPath = filepath.Join(attachmentDir, base+"-"+time.Now().Format("20060102-150405")+ext)
+
+		var reader io.Reader = part
+		if strings.EqualFold(part.Header.Get("Content-Transfer-Encoding"), "base64") {
+			reader = base64.NewDecoder(base64.StdEncoding, part)
 		}
 
-		if err := saveAttachment(part, destPath); err != nil {
-			log.Printf("Failed to save attachment %q: %v", filename, err)
+		if err := saveAttachment(reader, destPath); err != nil {
+			log.Printf("Failed to save attachment: %v", err)
 		} else {
 			log.Printf("Saved attachment: %s", destPath)
 		}
