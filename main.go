@@ -34,15 +34,9 @@ type Session struct {
 	to   []string
 }
 
-func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
-	s.from = from
-	return nil
-}
+func (s *Session) Mail(from string, opts *smtp.MailOptions) error { return nil }
 
-func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
-	s.to = append(s.to, to)
-	return nil
-}
+func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error { return nil }
 
 func (s *Session) Data(r io.Reader) error {
 	cleanupOldFiles()
@@ -107,9 +101,7 @@ func (s *Session) Reset() {
 	s.to = nil
 }
 
-func (s *Session) Logout() error {
-	return nil
-}
+func (s *Session) Logout() error { return nil }
 
 func saveAttachment(r io.Reader, destPath string) (err error) {
 	f, err := os.Create(destPath)
