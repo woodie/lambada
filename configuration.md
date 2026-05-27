@@ -61,7 +61,6 @@ curl smtp://localhost:2525 \
 sudo tail -f /var/log/syslog
 2026/05/27 00:35:50 SMTP open relay listening on 0.0.0.0:2525
 2026/05/27 00:37:51 New connection from myprinter
-2026/05/27 00:37:51 Cleanup removed old file: attachments/.DS_Store
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741215.pdf
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741236.pdf
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779744713.pdf

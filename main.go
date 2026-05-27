@@ -78,7 +78,7 @@ func (s *Session) Data(r io.Reader) error {
 
 		disposition, dispParams, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
 		if err != nil || disposition != "attachment" {
-			part.Close()
+			_ = part.Close()
 			continue
 		}
 
@@ -96,7 +96,7 @@ func (s *Session) Data(r io.Reader) error {
 		} else {
 			log.Printf("Saved attachment: %s", destPath)
 		}
-		part.Close()
+		_ = part.Close()
 	}
 
 	return nil
@@ -116,7 +116,13 @@ func saveAttachment(r io.Reader, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+
+	defer func() {
+		closeErr := f.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	written, err := io.Copy(f, r)
 	if err != nil {
@@ -136,6 +142,9 @@ func cleanupOldFiles() {
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
+			continue
+		}
+		if entry.Name() == ".DS_Store" {
 			continue
 		}
 		info, err := entry.Info()
