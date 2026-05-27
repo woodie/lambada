@@ -15,7 +15,7 @@ lambada
 vendor/
 
 # Saved attachments (probably don't want these in source control)
-attachments/
+attachments
 
 # macOS
 .DS_Store
