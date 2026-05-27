@@ -22,8 +22,9 @@ go build
 You need to edit the username in the service file.
 ```
 sudo cp system/lambada.service /etc/systemd/system/
-sudo chmod a+rwx /etc/systemd/system/lambada.service
 
+sudo systemctl daemon-reload
 sudo systemctl enable lambada
 sudo systemctl start lambada
+sudo systemctl status lambada
 ```
