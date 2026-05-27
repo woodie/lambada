@@ -96,10 +96,7 @@ func (s *Session) Data(r io.Reader) error {
 	return nil
 }
 
-func (s *Session) Reset() {
-	s.from = ""
-	s.to = nil
-}
+func (s *Session) Reset() {}
 
 func (s *Session) Logout() error { return nil }
 
