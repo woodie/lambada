@@ -20,7 +20,7 @@ go run main.go
 ## Build
 
 ```
-go get github.com/emersion/go-smtp
+install github.com/emersion/go-smtp@latest
 go build -buildvcs=false
 ```
 

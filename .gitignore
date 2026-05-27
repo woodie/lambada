@@ -7,7 +7,18 @@
 *.dll
 *.so
 *.dylib
+
+# Build output
 lambada
+
+# Go modules download cache
+vendor/
+
+# Saved attachments (probably don't want these in source control)
+attachments/
+
+# macOS
+.DS_Store
 
 # Test binary, built with `go test -c`
 *.test
@@ -27,7 +38,3 @@ go.work.sum
 
 # env file
 .env
-
-# Editor/IDE
-# .idea/
-# .vscode/
