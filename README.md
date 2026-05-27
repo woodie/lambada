@@ -1,8 +1,9 @@
 # Lambada scan exporter
 
-A minimal SMTP server written in Go that accepts incoming email and saves all attachments.
+A minimal SMTP server (written in Go) that accepts incoming email and saves attachments. 
+Run this on a **Raspberry Pi** along with **Samba**, to share scans from a scanner that requires and open relay to email scans. 
 
-There attachments can then be shared via Samba.
+<img width="697" height="358" alt="flow" src="https://github.com/user-attachments/assets/b7f68dcf-838a-4675-9b15-e6dc7f81e932" />
 
 ### Setup
 
