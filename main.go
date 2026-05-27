@@ -19,6 +19,7 @@ import (
 const (
 	attachmentDir = "./attachments"
 	listenAddr    = "0.0.0.0:2525"
+	maxFileAge    = 24 * time.Hour
 )
 
 type Backend struct{}
@@ -46,6 +47,8 @@ func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 }
 
 func (s *Session) Data(r io.Reader) error {
+	cleanupOldFiles()
+
 	msg, err := mail.ReadMessage(r)
 	if err != nil {
 		return err
@@ -81,7 +84,6 @@ func (s *Session) Data(r io.Reader) error {
 			continue
 		}
 
-		// Ignore the scanner's filename; use epoch time + original extension
 		ext := filepath.Ext(dispParams["filename"])
 		filename := fmt.Sprintf("%d%s", time.Now().Unix(), ext)
 		destPath := filepath.Join(attachmentDir, filename)
@@ -124,6 +126,33 @@ func saveAttachment(r io.Reader, destPath string) error {
 	}
 	log.Printf("  Written %d bytes to %s", written, destPath)
 	return nil
+}
+
+// cleanupOldFiles deletes files in attachmentDir older than maxFileAge.
+func cleanupOldFiles() {
+	cutoff := time.Now().Add(-maxFileAge)
+	entries, err := os.ReadDir(attachmentDir)
+	if err != nil {
+		log.Printf("Cleanup error reading dir: %v", err)
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			path := filepath.Join(attachmentDir, entry.Name())
+			if err := os.Remove(path); err != nil {
+				log.Printf("Cleanup failed to remove %s: %v", path, err)
+			} else {
+				log.Printf("Cleanup removed old file: %s", path)
+			}
+		}
+	}
 }
 
 func main() {
