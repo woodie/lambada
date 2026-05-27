@@ -16,7 +16,7 @@ import (
 	"github.com/emersion/go-smtp"
 )
 
-const (
+var (
 	attachmentDir = "./attachments"
 	listenAddr    = "0.0.0.0:2525"
 	maxFileAge    = 24 * time.Hour
