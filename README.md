@@ -11,9 +11,15 @@ The scanner emails scans to the Pi over SMTP. Lambada receives the message, deco
 
 ## Installation
 
-Clone the repo and install Go on the Pi, then:
+Make sure you have `git` and `go` installed on the Pi, then...
 
 ```bash
+# Pull down the project
+mkdir ~/workspace
+cd ~/workspace
+git clone git@github.com:woodie/lambada.git
+cd lambada
+
 # Link the attachments folder to Samba's public share
 ln -s /srv/samba/public attachments
 
@@ -30,6 +36,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable lambada
 sudo systemctl start lambada
 sudo systemctl status lambada
+
+# Scan something and watch the logs
+sudo tail -f /var/log/syslog
 ```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for testing and configuration details.
