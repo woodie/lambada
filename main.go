@@ -29,14 +29,15 @@ func (b *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &Session{}, nil
 }
 
-type Session struct {
-	from string
-	to   []string
-}
+type Session struct{}
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error { return nil }
 
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error { return nil }
+
+func (s *Session) Logout() error { return nil }
+
+func (s *Session) Reset() {}
 
 func (s *Session) Data(r io.Reader) error {
 	cleanupOldFiles()
@@ -95,10 +96,6 @@ func (s *Session) Data(r io.Reader) error {
 
 	return nil
 }
-
-func (s *Session) Reset() {}
-
-func (s *Session) Logout() error { return nil }
 
 func saveAttachment(r io.Reader, destPath string) (err error) {
 	f, err := os.Create(destPath)
