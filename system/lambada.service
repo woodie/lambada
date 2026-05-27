@@ -1,12 +1,13 @@
 [Unit]
-Description= Lambada scan exporter
+Description=Lambada scan exporter
 After=network.target
 
 [Service]
-WorkingDirectory=/home/someuser/workspace/lambada
-ExecStart=lambada
-Restart=always
-User=someuser
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/workspace/lambada
+ExecStart=/home/pi/workspace/lambada/lambada
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
