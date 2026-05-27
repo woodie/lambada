@@ -119,7 +119,6 @@ func saveAttachment(r io.Reader, destPath string) (err error) {
 	return nil
 }
 
-// cleanupOldFiles deletes files in attachmentDir older than maxFileAge.
 func cleanupOldFiles() {
 	cutoff := time.Now().Add(-maxFileAge)
 	entries, err := os.ReadDir(attachmentDir)
