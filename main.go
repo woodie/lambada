@@ -35,13 +35,11 @@ type Session struct {
 }
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
-	log.Printf("MAIL FROM: %s", from)
 	s.from = from
 	return nil
 }
 
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
-	log.Printf("RCPT TO: %s", to)
 	s.to = append(s.to, to)
 	return nil
 }
@@ -54,7 +52,7 @@ func (s *Session) Data(r io.Reader) error {
 		return err
 	}
 
-	log.Printf("Receiving message from %s (subject: %q)", s.from, msg.Header.Get("Subject"))
+	log.Println("Receiving message")
 
 	mediaType, params, err := mime.ParseMediaType(msg.Header.Get("Content-Type"))
 	if err != nil {
@@ -124,7 +122,7 @@ func saveAttachment(r io.Reader, destPath string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("  Written %d bytes to %s", written, destPath)
+	log.Printf("Write %d bytes to %s", written, destPath)
 	return nil
 }
 
@@ -168,7 +166,7 @@ func main() {
 	s.MaxMessageBytes = 25 * 1024 * 1024 // 25 MB
 	s.MaxRecipients = 100
 
-	log.Printf("SMTP open relay listening on %s (attachments -> %s)", listenAddr, attachmentDir)
+	log.Printf("SMTP open relay listening on %s", listenAddr)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalf("SMTP server error: %v", err)
 	}
