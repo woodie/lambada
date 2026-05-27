@@ -1,31 +1,35 @@
 # Lambada scan exporter
 
-A minimal SMTP server (written in Go) that accepts incoming email and saves attachments. 
-Run this on a **Raspberry Pi** along with **Samba**, to share scans from a scanner that requires and open relay to email scans. 
+A minimal SMTP server (written in Go) that accepts incoming email and saves attachments.
+Run this on a **Raspberry Pi** along with **Samba** to share scans from a scanner that requires an open relay to email scans.
 
 <img width="697" height="358" alt="flow" src="https://github.com/user-attachments/assets/3844ed47-9741-4017-afd2-7c778b765d1a" />
 
-### Installation
+## How it works
 
-Make a symbolic link to Samba's public folder.
-```
+The scanner emails scans to the Pi over SMTP. Lambada receives the message, decodes the attachment, and saves it with an epoch-based filename (e.g. `1779867473.pdf`) to a folder shared over the network via Samba. Files older than 24 hours are automatically cleaned up on each incoming message.
+
+## Installation
+
+Clone the repo and install Go on the Pi, then:
+
+```bash
+# Link the attachments folder to Samba's public share
 ln -s /srv/samba/public attachments
-```
 
-Compile lambada (after installing go).
-```
-install github.com/emersion/go-smtp@latest
-go build 
-```
+# Fetch dependencies and build
+go mod tidy
+go build
 
-Install the file as a service.
-```
+# Redirect port 25 to 2525 so the service can run as a non-root user
+sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
+
+# Install and start the service
 sudo cp system/lambada.service /etc/systemd/system/
-
 sudo systemctl daemon-reload
 sudo systemctl enable lambada
 sudo systemctl start lambada
 sudo systemctl status lambada
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for more detail.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for testing and configuration details.
