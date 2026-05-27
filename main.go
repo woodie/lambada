@@ -17,7 +17,7 @@ import (
 
 const (
 	attachmentDir = "./attachments"
-	listenAddr    = ":25"
+	listenAddr    = "0.0.0.0:25"
 )
 
 // Backend implements the SMTP server backend.
