@@ -5,7 +5,7 @@ Run this on a **Raspberry Pi** along with **Samba**, to share scans from a scann
 
 <img width="697" height="358" alt="flow" src="https://github.com/user-attachments/assets/3844ed47-9741-4017-afd2-7c778b765d1a" />
 
-### Setup
+### Installation
 
 Make a symbolic link to Samba's public folder.
 ```
@@ -18,9 +18,7 @@ install github.com/emersion/go-smtp@latest
 go build 
 ```
 
-### Install the service
-
-You need to edit the username in the service file.
+Install the file as a service.
 ```
 sudo cp system/lambada.service /etc/systemd/system/
 
@@ -29,3 +27,5 @@ sudo systemctl enable lambada
 sudo systemctl start lambada
 sudo systemctl status lambada
 ```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for more detail.
