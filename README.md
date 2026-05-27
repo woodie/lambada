@@ -18,11 +18,12 @@ go build
 ```
 
 ### Install the service
- 91 ```
- 92 sudo cp system/lambada.service /etc/systemd/system/
- 93 # Remember to edit the username
- 94 sudo chmod a+rwx /etc/systemd/system/lambada.service
- 95 
- 96 sudo systemctl enable lambada
- 97 sudo systemctl start lambada
- 98 ```
+
+You need to edit the username in the service file.
+```
+sudo cp system/lambada.service /etc/systemd/system/
+sudo chmod a+rwx /etc/systemd/system/lambada.service
+
+sudo systemctl enable lambada
+sudo systemctl start lambada
+```
