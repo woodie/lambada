@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/workspace/lambada
-ExecStart=/home/pi/workspace/lambada/lambada
+ExecStart=/usr/bin/env ./lambada
 Restart=on-failure
 
 [Install]
