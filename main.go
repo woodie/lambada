@@ -111,15 +111,13 @@ func (s *Session) Logout() error {
 	return nil
 }
 
-func saveAttachment(r io.Reader, destPath string) error {
+func saveAttachment(r io.Reader, destPath string) (err error) {
 	f, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
-
 	defer func() {
-		closeErr := f.Close()
-		if err == nil {
+		if closeErr := f.Close(); err == nil {
 			err = closeErr
 		}
 	}()
