@@ -20,6 +20,7 @@ go run main.go
 ## Build
 
 ```
+go get github.com/emersion/go-smtp
 go build -buildvcs=false
 ```
 
