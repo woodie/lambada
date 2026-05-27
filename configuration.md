@@ -59,3 +59,17 @@ curl smtp://localhost:2525 \
 | `listenAddr`      | `:2525`        | TCP address to listen on       |
 | `MaxMessageBytes` | 25 MB          | Maximum accepted message size  |
 
+## Logging
+```
+2026/05/27 00:35:50 SMTP open relay listening on 0.0.0.0:2525 (attachments -> ./attachments)
+2026/05/27 00:37:51 New connection from myprinter
+2026/05/27 00:37:51 MAIL FROM: printer@mydomain.com
+2026/05/27 00:37:51 RCPT TO: server@mydomain.com
+2026/05/27 00:37:51 Cleanup removed old file: attachments/.DS_Store
+2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741215.pdf
+2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741236.pdf
+2026/05/27 00:37:51 Cleanup removed old file: attachments/1779744713.pdf
+2026/05/27 00:37:53 Receiving message from printer@mydomain.com (subject: "no longer used")
+2026/05/27 00:37:56   Written 268809 bytes to attachments/1779867473.pdf
+2026/05/27 00:37:56 Saved attachment: attachments/1779867473.pdf
+```
