@@ -1,7 +1,4 @@
-# SMTP Attachment Server
-
-A minimal SMTP server written in Go that accepts incoming email and saves
-all attachments to the local filesystem.
+# Configuration
 
 ## Dependencies
 
@@ -56,8 +53,8 @@ curl smtp://localhost:2525 \
 | Constant          | Default        | Description                    |
 |-------------------|----------------|--------------------------------|
 | `attachmentDir`   | `./attachments`| Where attachments are written  |
-| `listenAddr`      | `:2525`        | TCP address to listen on       |
-| `MaxMessageBytes` | 25 MB          | Maximum accepted message size  |
+| `listenAddr`      | `0.0.0.0:2525` | TCP address to listen on       |
+| `MaxMessageBytes` | `25 MB`        | Maximum accepted message size  |
 
 ## Logging
 ```
@@ -69,7 +66,7 @@ curl smtp://localhost:2525 \
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741215.pdf
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779741236.pdf
 2026/05/27 00:37:51 Cleanup removed old file: attachments/1779744713.pdf
-2026/05/27 00:37:53 Receiving message from printer@mydomain.com (subject: "no longer used")
+2026/05/27 00:37:53 Receiving message from printer@mydomain.com (subject: "some subject")
 2026/05/27 00:37:56   Written 268809 bytes to attachments/1779867473.pdf
 2026/05/27 00:37:56 Saved attachment: attachments/1779867473.pdf
 ```
