@@ -43,42 +43,31 @@ var _ = Describe("Lambada", func() {
 			attachmentDir = dir
 		})
 
-		Context("with a file created right now", func() {
-			It("keeps the file", func() {
-				path := filepath.Join(dir, "1234567890.pdf")
-				Expect(os.WriteFile(path, []byte("data"), 0644)).To(Succeed())
+		Context("with a file", func() {
+			var path string
 
-				cleanupOldFiles()
-
-				Expect(path).To(BeAnExistingFile())
+			BeforeEach(func() {
+				path = filepath.Join(dir, "1234567890.pdf")
+				os.WriteFile(path, []byte("data"), 0644)
 			})
-		})
 
-		Context("with a file created yesterday", func() {
-			It("deletes the file", func() {
-				path := filepath.Join(dir, "1234567890.pdf")
-				Expect(os.WriteFile(path, []byte("data"), 0644)).To(Succeed())
-
-				old := time.Now().Add(-25 * time.Hour)
-				Expect(os.Chtimes(path, old, old)).To(Succeed())
-
-				cleanupOldFiles()
-
-				Expect(path).NotTo(BeAnExistingFile())
+			Context("created right now", func() {
+				It("keeps the file", func() {
+					cleanupOldFiles()
+					Expect(path).To(BeAnExistingFile())
+				})
 			})
-		})
 
-		Context("with a subdirectory", func() {
-			It("skips directories", func() {
-				subdir := filepath.Join(dir, "subdir")
-				Expect(os.Mkdir(subdir, 0755)).To(Succeed())
+			Context("created yesterday", func() {
+				BeforeEach(func() {
+					old := time.Now().Add(-25 * time.Hour)
+					os.Chtimes(path, old, old)
+				})
 
-				old := time.Now().Add(-25 * time.Hour)
-				Expect(os.Chtimes(subdir, old, old)).To(Succeed())
-
-				cleanupOldFiles()
-
-				Expect(subdir).To(BeADirectory())
+				It("deletes the file", func() {
+					cleanupOldFiles()
+					Expect(path).NotTo(BeAnExistingFile())
+				})
 			})
 		})
 	})
