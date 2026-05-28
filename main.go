@@ -108,11 +108,11 @@ func saveAttachment(r io.Reader, destPath string) (err error) {
 		}
 	}()
 
-	written, err := io.Copy(f, r)
+	bytes, err := io.Copy(f, r)
 	if err != nil {
 		return err
 	}
-	log.Printf("Write %d bytes to %s", written, destPath)
+	log.Printf("Write %d bytes to %s", bytes, destPath)
 	return nil
 }
 
