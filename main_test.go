@@ -59,8 +59,10 @@ var _ = Describe("Lambada", func() {
 			})
 
 			Context("created yesterday", func() {
+				var old time.Time
+
 				BeforeEach(func() {
-					old := time.Now().Add(-25 * time.Hour)
+					old = time.Now().Add(-25 * time.Hour)
 					os.Chtimes(path, old, old)
 				})
 
@@ -68,6 +70,20 @@ var _ = Describe("Lambada", func() {
 					cleanupOldFiles()
 					Expect(path).NotTo(BeAnExistingFile())
 				})
+
+				Context("named .DS_Store", func() {
+					BeforeEach(func() {
+						path = filepath.Join(dir, ".DS_Store")
+						os.WriteFile(path, []byte("data"), 0644)
+						os.Chtimes(path, old, old)
+					})
+
+					It("keeps the file", func() {
+						cleanupOldFiles()
+						Expect(path).To(BeAnExistingFile())
+					})
+				})
+
 			})
 		})
 	})
