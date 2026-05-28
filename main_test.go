@@ -13,77 +13,62 @@ import (
 var _ = Describe("Lambada", func() {
 
 	Describe("saveAttachment", func() {
+		var path string
+
 		Context("with a valid path", func() {
+			BeforeEach(func() { path = filepath.Join(GinkgoT().TempDir(), "1234567890.pdf") })
+
 			It("writes the content to disk", func() {
-				dir := GinkgoT().TempDir()
-				dest := filepath.Join(dir, "test.pdf")
-				content := "fake pdf content"
-
-				Expect(saveAttachment(strings.NewReader(content), dest)).To(Succeed())
-
-				data, err := os.ReadFile(dest)
+				Expect(saveAttachment(strings.NewReader("content"), path)).To(Succeed())
+				data, err := os.ReadFile(path)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(data)).To(Equal(content))
+				Expect(string(data)).To(Equal("content"))
 			})
 		})
 
 		Context("with an invalid path", func() {
+			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
+
 			It("returns an error", func() {
-				err := saveAttachment(strings.NewReader("data"), "/nonexistent/dir/file.pdf")
+				err := saveAttachment(strings.NewReader("content"), path)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
 
 	Describe("cleanupOldFiles", func() {
-		var dir string
-
-		BeforeEach(func() {
-			dir = GinkgoT().TempDir()
-			attachmentDir = dir
-		})
-
-		Context("with a file", func() {
-			var path string
+		Context("with files", func() {
+			var pdf string
+			var dss string
 
 			BeforeEach(func() {
-				path = filepath.Join(dir, "1234567890.pdf")
-				os.WriteFile(path, []byte("data"), 0644)
+				attachmentDir = GinkgoT().TempDir() // stub implementation
+				pdf = filepath.Join(attachmentDir, "1234567890.pdf")
+				os.WriteFile(pdf, []byte("data"), 0644)
+				dss = filepath.Join(attachmentDir, ".DS_Store")
+				os.WriteFile(dss, []byte("data"), 0644)
 			})
 
 			Context("created right now", func() {
-				It("keeps the file", func() {
+				It("keeps both PDF and .DS_Store", func() {
 					cleanupOldFiles()
-					Expect(path).To(BeAnExistingFile())
+					Expect(pdf).To(BeAnExistingFile())
+					Expect(dss).To(BeAnExistingFile())
 				})
 			})
 
 			Context("created yesterday", func() {
-				var old time.Time
-
 				BeforeEach(func() {
-					old = time.Now().Add(-25 * time.Hour)
-					os.Chtimes(path, old, old)
+					old := time.Now().Add(-25 * time.Hour)
+					os.Chtimes(pdf, old, old)
+					os.Chtimes(dss, old, old)
 				})
 
-				It("deletes the file", func() {
+				It("deletes PDF but keeps .DS_Store", func() {
 					cleanupOldFiles()
-					Expect(path).NotTo(BeAnExistingFile())
+					Expect(pdf).NotTo(BeAnExistingFile())
+					Expect(dss).To(BeAnExistingFile())
 				})
-
-				Context("named .DS_Store", func() {
-					BeforeEach(func() {
-						path = filepath.Join(dir, ".DS_Store")
-						os.WriteFile(path, []byte("data"), 0644)
-						os.Chtimes(path, old, old)
-					})
-
-					It("keeps the file", func() {
-						cleanupOldFiles()
-						Expect(path).To(BeAnExistingFile())
-					})
-				})
-
 			})
 		})
 	})
