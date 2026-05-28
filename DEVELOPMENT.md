@@ -37,10 +37,7 @@ go install github.com/onsi/ginkgo/v2/ginkgo@latest
 # Make sure ~/go/bin is on your PATH
 export PATH="$PATH:$(go env GOPATH)/bin"
 
-# Run tests with the standard Go runner
-go test -v ./...
-
-# Or run tests with the Ginkgo CLI
+# Run tests with the Ginkgo CLI
 ginkgo -v
 ```
 
