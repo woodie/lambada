@@ -90,10 +90,10 @@ Example output:
 
 ## systemd Service
 
-The service file lives at `system/lambada.service`. To install on Raspberry Pi:
+The service file lives at `service/lambada.service`. To install on Raspberry Pi:
 
 ```bash
-sudo cp system/lambada.service /etc/systemd/system/
+sudo cp service/lambada.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable lambada
 sudo systemctl start lambada

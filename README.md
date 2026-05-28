@@ -31,7 +31,7 @@ go build
 sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
 
 # Install and start the service
-sudo cp system/lambada.service /etc/systemd/system/
+sudo cp service/lambada.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable lambada
 sudo systemctl start lambada
