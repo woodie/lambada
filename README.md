@@ -42,3 +42,5 @@ sudo tail -f /var/log/syslog
 ```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for testing and configuration details.
+
+If you want to use a web server to share files, see the [scandalous project]{https://github.com/woodie/scandalous).
