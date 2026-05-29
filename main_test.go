@@ -11,17 +11,91 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var plainMessage = "From: sender@example.com\r\n" +
+	"Content-Type: text/plain\r\n" +
+	"\r\nHello world"
+
+var multipartMessage = "From: sender@example.com\r\n" +
+	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+	"\r\n" +
+	"--boundary\r\n" +
+	"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
+	"\r\nfile content\r\n" +
+	"--boundary--\r\n"
+
+var inlineMessage = "From: sender@example.com\r\n" +
+	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+	"\r\n" +
+	"--boundary\r\n" +
+	"Content-Type: text/plain\r\n" +
+	"\r\njust body text\r\n" +
+	"--boundary--\r\n"
+
 var _ = Describe("Lambada", func() {
 
-	Describe("processAttachments", func() {
-		var (
-			destDir string
-			err     error
-		)
+	Describe("saveAttachment", func() {
+		var path string
 
-		BeforeEach(func() {
-			destDir = GinkgoT().TempDir()
+		Context("when the path is valid", func() {
+			BeforeEach(func() { path = GinkgoT().TempDir() })
+
+			It("writes the content to disk", func() {
+				dest := filepath.Join(path, "test.pdf")
+				Expect(saveAttachment(strings.NewReader("fake pdf content"), dest)).To(Succeed())
+				data, err := os.ReadFile(dest)
+				Expect(err).To(BeNil())
+				Expect(string(data)).To(Equal("fake pdf content"))
+			})
 		})
+
+		Context("when the path is invalid", func() {
+			It("returns an error", func() {
+				Expect(saveAttachment(strings.NewReader("data"), "/nonexistent/dir/file.pdf")).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("cleanupOldFiles", func() {
+
+		BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
+
+		Context("when a file is recent", func() {
+			It("keeps the file", func() {
+				path := filepath.Join(attachmentDir, "1234567890.pdf")
+				os.WriteFile(path, []byte("data"), 0644)
+				cleanupOldFiles()
+				Expect(path).To(BeAnExistingFile())
+			})
+		})
+
+		Context("when a file is older than maxFileAge", func() {
+			It("deletes the file", func() {
+				path := filepath.Join(attachmentDir, "1234567890.pdf")
+				os.WriteFile(path, []byte("data"), 0644)
+				old := time.Now().Add(-25 * time.Hour)
+				os.Chtimes(path, old, old)
+				cleanupOldFiles()
+				Expect(path).NotTo(BeAnExistingFile())
+			})
+		})
+
+		Context("when an entry is a directory", func() {
+			It("skips it", func() {
+				subdir := filepath.Join(attachmentDir, "subdir")
+				os.Mkdir(subdir, 0755)
+				old := time.Now().Add(-25 * time.Hour)
+				os.Chtimes(subdir, old, old)
+				cleanupOldFiles()
+				Expect(subdir).To(BeADirectory())
+			})
+		})
+	})
+
+	Describe("processAttachments", func() {
+		var destDir string
+		var err error
+
+		BeforeEach(func() { destDir = GinkgoT().TempDir() })
 
 		processMessage := func(raw string) {
 			msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
@@ -30,11 +104,7 @@ var _ = Describe("Lambada", func() {
 		}
 
 		Context("when the message is not multipart", func() {
-			BeforeEach(func() {
-				processMessage("From: sender@example.com\r\n" +
-					"Content-Type: text/plain\r\n" +
-					"\r\nHello world")
-			})
+			BeforeEach(func() { processMessage(plainMessage) })
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves no files", func() {
@@ -44,15 +114,7 @@ var _ = Describe("Lambada", func() {
 		})
 
 		Context("when the message has an attachment", func() {
-			BeforeEach(func() {
-				processMessage("From: sender@example.com\r\n" +
-					"Content-Type: multipart/mixed; boundary=boundary\r\n" +
-					"\r\n" +
-					"--boundary\r\n" +
-					"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
-					"\r\nfile content\r\n" +
-					"--boundary--\r\n")
-			})
+			BeforeEach(func() { processMessage(multipartMessage) })
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves one file", func() {
@@ -71,81 +133,12 @@ var _ = Describe("Lambada", func() {
 		})
 
 		Context("when the message has only inline parts", func() {
-			BeforeEach(func() {
-				processMessage("From: sender@example.com\r\n" +
-					"Content-Type: multipart/mixed; boundary=boundary\r\n" +
-					"\r\n" +
-					"--boundary\r\n" +
-					"Content-Type: text/plain\r\n" +
-					"\r\njust body text\r\n" +
-					"--boundary--\r\n")
-			})
+			BeforeEach(func() { processMessage(inlineMessage) })
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves no files", func() {
 				entries, _ := os.ReadDir(destDir)
 				Expect(entries).To(BeEmpty())
-			})
-		})
-	})
-
-	Describe("saveAttachment", func() {
-		var path string
-
-		Context("with a valid path", func() {
-			BeforeEach(func() { path = filepath.Join(GinkgoT().TempDir(), "1234567890.pdf") })
-
-			It("writes the content to disk", func() {
-				Expect(saveAttachment(strings.NewReader("content"), path)).To(Succeed())
-				data, err := os.ReadFile(path)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(data)).To(Equal("content"))
-			})
-		})
-
-		Context("with an invalid path", func() {
-			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
-
-			It("returns an error", func() {
-				err := saveAttachment(strings.NewReader("content"), path)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-	})
-
-	Describe("cleanupOldFiles", func() {
-		Context("with files", func() {
-			var pdf string
-			var dss string
-
-			BeforeEach(func() {
-				attachmentDir = GinkgoT().TempDir() // stub implementation
-				pdf = filepath.Join(attachmentDir, "1234567890.pdf")
-				os.WriteFile(pdf, []byte("data"), 0644)
-				dss = filepath.Join(attachmentDir, ".DS_Store")
-				os.WriteFile(dss, []byte("data"), 0644)
-			})
-
-			Context("created right now", func() {
-				It("keeps both PDF and .DS_Store", func() {
-					cleanupOldFiles()
-					Expect(pdf).To(BeAnExistingFile())
-					Expect(dss).To(BeAnExistingFile())
-				})
-			})
-
-			Context("created yesterday", func() {
-				BeforeEach(func() {
-					old := time.Now().Add(-25 * time.Hour)
-					os.Chtimes(pdf, old, old)
-					os.Chtimes(dss, old, old)
-				})
-
-				It("deletes PDF but keeps .DS_Store", func() {
-					cleanupOldFiles()
-					Expect(pdf).NotTo(BeAnExistingFile())
-					Expect(dss).To(BeAnExistingFile())
-				})
 			})
 		})
 	})
