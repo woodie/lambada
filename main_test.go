@@ -56,37 +56,42 @@ var _ = Describe("Lambada", func() {
 	})
 
 	Describe("cleanupOldFiles", func() {
+		var path string
+		var old time.Time
 
-		BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
+		BeforeEach(func() {
+			attachmentDir = GinkgoT().TempDir() // stub implementation
+			old = time.Now().Add(-25 * time.Hour)
+			path = filepath.Join(attachmentDir, "1234567890.pdf")
+			os.WriteFile(path, []byte("data"), 0644)
+		})
 
 		Context("when a file is recent", func() {
 			It("keeps the file", func() {
-				path := filepath.Join(attachmentDir, "1234567890.pdf")
-				os.WriteFile(path, []byte("data"), 0644)
 				cleanupOldFiles()
 				Expect(path).To(BeAnExistingFile())
 			})
 		})
 
 		Context("when a file is older than maxFileAge", func() {
+			BeforeEach(func() { os.Chtimes(path, old, old) })
+
 			It("deletes the file", func() {
-				path := filepath.Join(attachmentDir, "1234567890.pdf")
-				os.WriteFile(path, []byte("data"), 0644)
-				old := time.Now().Add(-25 * time.Hour)
-				os.Chtimes(path, old, old)
 				cleanupOldFiles()
 				Expect(path).NotTo(BeAnExistingFile())
 			})
 		})
 
 		Context("when an entry is a directory", func() {
+			BeforeEach(func() {
+				path = filepath.Join(attachmentDir, "subdir")
+				os.Mkdir(path, 0755)
+				os.Chtimes(path, old, old)
+			})
+
 			It("skips it", func() {
-				subdir := filepath.Join(attachmentDir, "subdir")
-				os.Mkdir(subdir, 0755)
-				old := time.Now().Add(-25 * time.Hour)
-				os.Chtimes(subdir, old, old)
 				cleanupOldFiles()
-				Expect(subdir).To(BeADirectory())
+				Expect(path).To(BeADirectory())
 			})
 		})
 	})
