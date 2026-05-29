@@ -33,11 +33,13 @@ var inlineMessage = "From: sender@example.com\r\n" +
 
 var _ = Describe("Lambada", func() {
 
+	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
+
 	Describe("saveAttachment", func() {
 		var path string
 
 		Context("when the path is valid", func() {
-			BeforeEach(func() { path = filepath.Join(GinkgoT().TempDir(), "test.pdf") })
+			BeforeEach(func() { path = filepath.Join(attachmentDir, "test.pdf") })
 
 			It("writes the content to disk", func() {
 				Expect(saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
@@ -48,8 +50,10 @@ var _ = Describe("Lambada", func() {
 		})
 
 		Context("when the path is invalid", func() {
+			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
+
 			It("returns an error", func() {
-				Expect(saveAttachment(strings.NewReader("data"), "/nonexistent/dir/file.pdf")).To(HaveOccurred())
+				Expect(saveAttachment(strings.NewReader("data"), path)).To(HaveOccurred())
 			})
 		})
 	})
@@ -60,7 +64,6 @@ var _ = Describe("Lambada", func() {
 		var dir string
 
 		BeforeEach(func() {
-			attachmentDir = GinkgoT().TempDir() // stub implementation
 			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
 			os.WriteFile(pdf, []byte("data"), 0644)
 			dss = filepath.Join(attachmentDir, ".DS_Store")
@@ -100,15 +103,12 @@ var _ = Describe("Lambada", func() {
 	})
 
 	Describe("processAttachments", func() {
-		var destDir string
 		var err error
-
-		BeforeEach(func() { destDir = GinkgoT().TempDir() })
 
 		processMessage := func(raw string) {
 			msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
 			Expect(msgErr).To(BeNil())
-			err = processAttachments(msg, destDir)
+			err = processAttachments(msg)
 		}
 
 		Context("when the message is not multipart", func() {
@@ -116,7 +116,7 @@ var _ = Describe("Lambada", func() {
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves no files", func() {
-				entries, _ := os.ReadDir(destDir)
+				entries, _ := os.ReadDir(attachmentDir)
 				Expect(entries).To(BeEmpty())
 			})
 		})
@@ -126,16 +126,16 @@ var _ = Describe("Lambada", func() {
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves one file", func() {
-				entries, _ := os.ReadDir(destDir)
+				entries, _ := os.ReadDir(attachmentDir)
 				Expect(entries).To(HaveLen(1))
 			})
 			It("preserves the file extension", func() {
-				entries, _ := os.ReadDir(destDir)
+				entries, _ := os.ReadDir(attachmentDir)
 				Expect(filepath.Ext(entries[0].Name())).To(Equal(".txt"))
 			})
 			It("preserves the file content", func() {
-				entries, _ := os.ReadDir(destDir)
-				data, _ := os.ReadFile(filepath.Join(destDir, entries[0].Name()))
+				entries, _ := os.ReadDir(attachmentDir)
+				data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
 				Expect(string(data)).To(Equal("file content"))
 			})
 		})
@@ -145,7 +145,7 @@ var _ = Describe("Lambada", func() {
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves no files", func() {
-				entries, _ := os.ReadDir(destDir)
+				entries, _ := os.ReadDir(attachmentDir)
 				Expect(entries).To(BeEmpty())
 			})
 		})
