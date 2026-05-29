@@ -37,12 +37,11 @@ var _ = Describe("Lambada", func() {
 		var path string
 
 		Context("when the path is valid", func() {
-			BeforeEach(func() { path = GinkgoT().TempDir() })
+			BeforeEach(func() { path = filepath.Join(GinkgoT().TempDir(), "test.pdf") })
 
 			It("writes the content to disk", func() {
-				dest := filepath.Join(path, "test.pdf")
-				Expect(saveAttachment(strings.NewReader("fake pdf content"), dest)).To(Succeed())
-				data, err := os.ReadFile(dest)
+				Expect(saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
+				data, err := os.ReadFile(path)
 				Expect(err).To(BeNil())
 				Expect(string(data)).To(Equal("fake pdf content"))
 			})
@@ -57,17 +56,17 @@ var _ = Describe("Lambada", func() {
 
 	Describe("cleanupOldFiles", func() {
 		var pdf string
-		var dir string
 		var dss string
+		var dir string
 
 		BeforeEach(func() {
 			attachmentDir = GinkgoT().TempDir() // stub implementation
 			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
 			os.WriteFile(pdf, []byte("data"), 0644)
-			dir = filepath.Join(attachmentDir, "subdir")
-			os.Mkdir(dir, 0755)
 			dss = filepath.Join(attachmentDir, ".DS_Store")
 			os.WriteFile(dss, []byte("data"), 0644)
+			dir = filepath.Join(attachmentDir, "subdir")
+			os.Mkdir(dir, 0755)
 		})
 
 		Context("when entries are recent", func() {
@@ -89,13 +88,13 @@ var _ = Describe("Lambada", func() {
 				cleanupOldFiles()
 				Expect(pdf).NotTo(BeAnExistingFile())
 			})
-			It("keeps the directory", func() {
-				cleanupOldFiles()
-				Expect(dir).To(BeADirectory())
-			})
 			It("keeps the .DS_Store", func() {
 				cleanupOldFiles()
 				Expect(dss).To(BeAnExistingFile())
+			})
+			It("keeps the directory", func() {
+				cleanupOldFiles()
+				Expect(dir).To(BeADirectory())
 			})
 		})
 	})
