@@ -41,13 +41,13 @@ func (s *Session) Reset() {}
 
 func (s *Session) Data(r io.Reader) error {
 	cleanupOldFiles()
-
 	msg, err := mail.ReadMessage(r)
-	if err != nil {
-		return err
-	}
-
+	if err != nil { return err }
 	log.Println("Receiving message")
+	return processAttachments(msg, attachmentDir)
+}
+
+func processAttachments(msg *mail.Message, destDir string) error {
 
 	mediaType, params, err := mime.ParseMediaType(msg.Header.Get("Content-Type"))
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *Session) Data(r io.Reader) error {
 
 		ext := filepath.Ext(dispParams["filename"])
 		filename := fmt.Sprintf("%d%s", time.Now().Unix(), ext)
-		destPath := filepath.Join(attachmentDir, filename)
+		destPath := filepath.Join(destDir, filename)
 
 		var reader io.Reader = part
 		if strings.EqualFold(part.Header.Get("Content-Transfer-Encoding"), "base64") {
@@ -93,7 +93,6 @@ func (s *Session) Data(r io.Reader) error {
 		}
 		_ = part.Close()
 	}
-
 	return nil
 }
 

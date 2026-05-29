@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/mail"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,82 @@ import (
 )
 
 var _ = Describe("Lambada", func() {
+
+	Describe("processAttachments", func() {
+		var (
+			destDir string
+			err     error
+		)
+
+		BeforeEach(func() {
+			destDir = GinkgoT().TempDir()
+		})
+
+		processMessage := func(raw string) {
+			msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
+			Expect(msgErr).To(BeNil())
+			err = processAttachments(msg, destDir)
+		}
+
+		Context("when the message is not multipart", func() {
+			BeforeEach(func() {
+				processMessage("From: sender@example.com\r\n" +
+					"Content-Type: text/plain\r\n" +
+					"\r\nHello world")
+			})
+
+			It("returns no error", func() { Expect(err).To(BeNil()) })
+			It("saves no files", func() {
+				entries, _ := os.ReadDir(destDir)
+				Expect(entries).To(BeEmpty())
+			})
+		})
+
+		Context("when the message has an attachment", func() {
+			BeforeEach(func() {
+				processMessage("From: sender@example.com\r\n" +
+					"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+					"\r\n" +
+					"--boundary\r\n" +
+					"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
+					"\r\nfile content\r\n" +
+					"--boundary--\r\n")
+			})
+
+			It("returns no error", func() { Expect(err).To(BeNil()) })
+			It("saves one file", func() {
+				entries, _ := os.ReadDir(destDir)
+				Expect(entries).To(HaveLen(1))
+			})
+			It("preserves the file extension", func() {
+				entries, _ := os.ReadDir(destDir)
+				Expect(filepath.Ext(entries[0].Name())).To(Equal(".txt"))
+			})
+			It("preserves the file content", func() {
+				entries, _ := os.ReadDir(destDir)
+				data, _ := os.ReadFile(filepath.Join(destDir, entries[0].Name()))
+				Expect(string(data)).To(Equal("file content"))
+			})
+		})
+
+		Context("when the message has only inline parts", func() {
+			BeforeEach(func() {
+				processMessage("From: sender@example.com\r\n" +
+					"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+					"\r\n" +
+					"--boundary\r\n" +
+					"Content-Type: text/plain\r\n" +
+					"\r\njust body text\r\n" +
+					"--boundary--\r\n")
+			})
+
+			It("returns no error", func() { Expect(err).To(BeNil()) })
+			It("saves no files", func() {
+				entries, _ := os.ReadDir(destDir)
+				Expect(entries).To(BeEmpty())
+			})
+		})
+	})
 
 	Describe("saveAttachment", func() {
 		var path string
