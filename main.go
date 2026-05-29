@@ -40,9 +40,11 @@ func (s *Session) Logout() error { return nil }
 func (s *Session) Reset() {}
 
 func (s *Session) Data(r io.Reader) error {
-	cleanupOldFiles()
 	msg, err := mail.ReadMessage(r)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
+	cleanupOldFiles()
 	log.Println("Receiving message")
 	return processAttachments(msg, attachmentDir)
 }
@@ -123,10 +125,7 @@ func cleanupOldFiles() {
 		return
 	}
 	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if entry.Name() == ".DS_Store" {
+		if entry.Name() == ".DS_Store" || entry.IsDir() {
 			continue
 		}
 		info, err := entry.Info()
