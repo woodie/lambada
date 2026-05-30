@@ -44,9 +44,7 @@ var _ = Describe("Lambada", func() {
 	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
 
 	Describe("cleanupOldFiles", func() {
-		var pdf string
-		var dss string
-		var dir string
+		var pdf, dss, dir string
 
 		BeforeEach(func() {
 			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
