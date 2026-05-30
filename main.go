@@ -45,11 +45,11 @@ func (s *Session) Data(r io.Reader) error {
 		return err
 	}
 	cleanupOldFiles()
-	log.Println("Receiving message")
 	return processAttachments(msg)
 }
 
 func processAttachments(msg *mail.Message) error {
+	log.Println("Receiving message")
 
 	mediaType, params, err := mime.ParseMediaType(msg.Header.Get("Content-Type"))
 	if err != nil {

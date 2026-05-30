@@ -15,48 +15,23 @@ var plainMessage = "From: sender@example.com\r\n" +
 	"Content-Type: text/plain\r\n" +
 	"\r\nHello world"
 
-var multipartMessage = "From: sender@example.com\r\n" +
-	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
-	"\r\n" +
-	"--boundary\r\n" +
-	"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
-	"\r\nfile content\r\n" +
-	"--boundary--\r\n"
-
 var inlineMessage = "From: sender@example.com\r\n" +
 	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
-	"\r\n" +
-	"--boundary\r\n" +
+	"\r\n--boundary\r\n" +
 	"Content-Type: text/plain\r\n" +
 	"\r\njust body text\r\n" +
+	"--boundary--\r\n"
+
+var multipartMessage = "From: sender@example.com\r\n" +
+	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+	"\r\n--boundary\r\n" +
+	"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
+	"\r\nfile content\r\n" +
 	"--boundary--\r\n"
 
 var _ = Describe("Lambada", func() {
 
 	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
-
-	Describe("saveAttachment", func() {
-		var path string
-
-		Context("when the path is valid", func() {
-			BeforeEach(func() { path = filepath.Join(attachmentDir, "test.pdf") })
-
-			It("writes the content to disk", func() {
-				Expect(saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
-				data, err := os.ReadFile(path)
-				Expect(err).To(BeNil())
-				Expect(string(data)).To(Equal("fake pdf content"))
-			})
-		})
-
-		Context("when the path is invalid", func() {
-			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
-
-			It("returns an error", func() {
-				Expect(saveAttachment(strings.NewReader("data"), path)).To(HaveOccurred())
-			})
-		})
-	})
 
 	Describe("cleanupOldFiles", func() {
 		var pdf string
@@ -121,6 +96,16 @@ var _ = Describe("Lambada", func() {
 			})
 		})
 
+		Context("when the message has only inline parts", func() {
+			BeforeEach(func() { processMessage(inlineMessage) })
+
+			It("returns no error", func() { Expect(err).To(BeNil()) })
+			It("saves no files", func() {
+				entries, _ := os.ReadDir(attachmentDir)
+				Expect(entries).To(BeEmpty())
+			})
+		})
+
 		Context("when the message has an attachment", func() {
 			BeforeEach(func() { processMessage(multipartMessage) })
 
@@ -139,14 +124,27 @@ var _ = Describe("Lambada", func() {
 				Expect(string(data)).To(Equal("file content"))
 			})
 		})
+	})
 
-		Context("when the message has only inline parts", func() {
-			BeforeEach(func() { processMessage(inlineMessage) })
+	Describe("saveAttachment", func() {
+		var path string
 
-			It("returns no error", func() { Expect(err).To(BeNil()) })
-			It("saves no files", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(entries).To(BeEmpty())
+		Context("when the path is valid", func() {
+			BeforeEach(func() { path = filepath.Join(attachmentDir, "test.pdf") })
+
+			It("writes the content to disk", func() {
+				Expect(saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
+				data, err := os.ReadFile(path)
+				Expect(err).To(BeNil())
+				Expect(string(data)).To(Equal("fake pdf content"))
+			})
+		})
+
+		Context("when the path is invalid", func() {
+			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
+
+			It("returns an error", func() {
+				Expect(saveAttachment(strings.NewReader("data"), path)).To(HaveOccurred())
 			})
 		})
 	})
