@@ -43,6 +43,32 @@ var _ = Describe("Lambada", func() {
 
 	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
 
+	Describe("checkAttachmentDir", func() {
+		Context("when the path is missing", func() {
+			It("creates the directory", func() {
+				attachmentDir = filepath.Join(GinkgoT().TempDir(), "newdir")
+				checkAttachmentDir()
+				Expect(attachmentDir).To(BeADirectory())
+			})
+		})
+
+		Context("when the path is a real directory", func() {
+			It("does not error", func() {
+				attachmentDir = GinkgoT().TempDir()
+				Expect(func() { checkAttachmentDir() }).NotTo(Panic())
+			})
+		})
+
+		Context("when the path is a symlink", func() {
+			It("does not error", func() {
+				target := GinkgoT().TempDir()
+				attachmentDir = filepath.Join(GinkgoT().TempDir(), "link")
+				os.Symlink(target, attachmentDir)
+				Expect(func() { checkAttachmentDir() }).NotTo(Panic())
+			})
+		})
+	})
+
 	Describe("cleanupOldFiles", func() {
 		var pdf, dss, dir string
 

@@ -143,17 +143,28 @@ func cleanupOldFiles() {
 	}
 }
 
-func main() {
+func checkAttachmentDir() {
 	if err := os.MkdirAll(attachmentDir, 0755); err != nil {
 		log.Fatalf("Cannot create attachment directory: %v", err)
 	}
+	if info, err := os.Lstat(attachmentDir); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			if target, err := os.Readlink(attachmentDir); err == nil {
+				log.Printf("Attachment symlink: %s -> %s", attachmentDir, target)
+			}
+		}
+	}
+}
+
+func main() {
+	checkAttachmentDir()
 
 	s := smtp.NewServer(&Backend{})
 	s.Addr = listenAddr
 	s.Domain = "localhost"
 	s.ReadTimeout = 60 * time.Second
 	s.WriteTimeout = 60 * time.Second
-	s.MaxMessageBytes = 25 * 1024 * 1024 // 25 MB
+	s.MaxMessageBytes = 25 * 1024 * 1024
 	s.MaxRecipients = 100
 
 	log.Printf("SMTP open relay listening on %s", listenAddr)
