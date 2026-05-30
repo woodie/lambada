@@ -23,6 +23,13 @@ var inlineMessage = "From: sender@example.com\r\n" +
 	"\r\njust body text\r\n" +
 	"--boundary--\r\n"
 
+var multipartMessage = "From: sender@example.com\r\n" +
+	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
+	"\r\n--boundary\r\n" +
+	"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
+	"\r\nfile content\r\n" +
+	"--boundary--\r\n"
+
 var base64PdfMessage = "From: sender@example.com\r\n" +
 	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
 	"\r\n--boundary\r\n" +
@@ -106,6 +113,25 @@ var _ = Describe("Lambada", func() {
 			It("saves no files", func() {
 				entries, _ := os.ReadDir(attachmentDir)
 				Expect(entries).To(BeEmpty())
+			})
+		})
+
+		Context("when the message has an attachment", func() {
+			BeforeEach(func() { processMessage(multipartMessage) })
+
+			It("returns no error", func() { Expect(err).To(BeNil()) })
+			It("saves one file", func() {
+				entries, _ := os.ReadDir(attachmentDir)
+				Expect(entries).To(HaveLen(1))
+			})
+			It("preserves the file extension", func() {
+				entries, _ := os.ReadDir(attachmentDir)
+				Expect(filepath.Ext(entries[0].Name())).To(Equal(".txt"))
+			})
+			It("preserves the file content", func() {
+				entries, _ := os.ReadDir(attachmentDir)
+				data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
+				Expect(string(data)).To(Equal("file content"))
 			})
 		})
 
