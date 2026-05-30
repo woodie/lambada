@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -22,11 +23,13 @@ var inlineMessage = "From: sender@example.com\r\n" +
 	"\r\njust body text\r\n" +
 	"--boundary--\r\n"
 
-var multipartMessage = "From: sender@example.com\r\n" +
+var base64PdfMessage = "From: sender@example.com\r\n" +
 	"Content-Type: multipart/mixed; boundary=boundary\r\n" +
 	"\r\n--boundary\r\n" +
-	"Content-Disposition: attachment; filename=\"test.txt\"\r\n" +
-	"\r\nfile content\r\n" +
+	"Content-Type: application/pdf\r\n" +
+	"Content-Disposition: attachment; filename=\"test.pdf\"\r\n" +
+	"Content-Transfer-Encoding: base64\r\n" +
+	"\r\n" + base64.StdEncoding.EncodeToString([]byte("fake pdf content")) + "\r\n" +
 	"--boundary--\r\n"
 
 var _ = Describe("Lambada", func() {
@@ -106,8 +109,8 @@ var _ = Describe("Lambada", func() {
 			})
 		})
 
-		Context("when the message has an attachment", func() {
-			BeforeEach(func() { processMessage(multipartMessage) })
+		Context("when the message has a base64-encoded PDF attachment", func() {
+			BeforeEach(func() { processMessage(base64PdfMessage) })
 
 			It("returns no error", func() { Expect(err).To(BeNil()) })
 			It("saves one file", func() {
@@ -116,12 +119,12 @@ var _ = Describe("Lambada", func() {
 			})
 			It("preserves the file extension", func() {
 				entries, _ := os.ReadDir(attachmentDir)
-				Expect(filepath.Ext(entries[0].Name())).To(Equal(".txt"))
+				Expect(filepath.Ext(entries[0].Name())).To(Equal(".pdf"))
 			})
-			It("preserves the file content", func() {
+			It("decodes the base64 content correctly", func() {
 				entries, _ := os.ReadDir(attachmentDir)
 				data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
-				Expect(string(data)).To(Equal("file content"))
+				Expect(string(data)).To(Equal("fake pdf content"))
 			})
 		})
 	})
