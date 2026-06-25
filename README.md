@@ -1,5 +1,9 @@
 # Lambada scan exporter
 
+[![CI](https://github.com/woodie/xctidy/actions/workflows/makefile.yml/badge.svg)](https://github.com/woodie/xctidy/actions/workflows/makefile.yml)
+[![Release](https://img.shields.io/github/v/release/woodie/xctidy.svg)](https://github.com/woodie/xctidy/releases/latest)
+[![License](https://img.shields.io/github/license/woodie/xctidy.svg)](LICENSE)
+
 A minimal SMTP server (written in Go) that accepts incoming email and saves attachments.
 Run this on a **Raspberry Pi** along with **Samba** to share scans from a scanner that requires an open relay to email scans.
 
