@@ -11,8 +11,6 @@ and browse or download them from your home network.
 
 <img width="697" height="358" alt="flow" src="https://github.com/user-attachments/assets/3844ed47-9741-4017-afd2-7c778b765d1a" />
 
-## Why this exists
-
 A lot of perfectly good scanners and printers end up in a landfill the
 day their cloud-email feature stops working -- usually because the auth
 method it depends on (an open relay, a now-revoked app password) quietly
@@ -21,10 +19,6 @@ firmware on hardware that old. If your printer can still email a scan
 to *somewhere*, lambada plus an SMTP open relay it trusts (its own,
 deliberately -- see Installation) is enough to keep it useful for years
 past the cloud feature's death, on hardware as small as a Pi Zero.
-
-If this is useful enough that someone wants it running on Windows
-instead of a Mac, that's a good problem to have -- [open an
-issue](https://github.com/woodie/zouk/issues).
 
 ## How it works
 
@@ -52,8 +46,7 @@ option** for anyone who'd rather mount a network share than use either
 of those -- link `attachments/` to a Samba share (see Installation
 below) and skip running `lambada-web` entirely, since the two services
 don't depend on each other. It works, but it's noticeably slower and
-clunkier on a Pi than the alternatives above; we kept it around for
-people who want to try it, not because we'd recommend it.
+clunkier on a Pi than the alternatives above.
 
 <img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
 
