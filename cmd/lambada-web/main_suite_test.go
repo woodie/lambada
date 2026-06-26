@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestLambada(t *testing.T) {
+func TestLambadaWeb(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Lambada Suite")
+	RunSpecs(t, "Lambada Web Suite")
 }

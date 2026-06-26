@@ -1,0 +1,28 @@
+body {
+	font-family: sans-serif;
+	padding: 20px;
+	max-width: 600px;
+}
+
+ul {
+	list-style-type: none;
+	padding: 0;
+}
+
+li {
+	padding: 6px;
+	display: flex;
+    justify-content: left;
+}
+li span {
+	padding: 0 20px;
+}
+
+a {
+	text-decoration: none;
+	color: #0066cc;
+}
+
+a:hover {
+	text-decoration: underline;
+}

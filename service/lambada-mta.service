@@ -1,0 +1,13 @@
+[Unit]
+Description=Lambada MTA (SMTP scan exporter)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/workspace/lambada
+ExecStart=/usr/bin/env ./lambada-mta
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

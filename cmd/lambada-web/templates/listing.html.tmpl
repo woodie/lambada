@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Available Scans</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Available Scans</h2>
+  {{if not .Scans}}
+    <p>No files found in the directory.</p>
+  {{else}}
+    <ul>
+      {{range .Scans}}
+        <li>
+          <a href="/download/{{.Name}}">&#128196; {{.HumanSize}}</a>
+          <span>{{.TimeAgo}} ago</span>
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+</body>
+</html>

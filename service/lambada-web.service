@@ -1,12 +1,12 @@
 [Unit]
-Description=Lambada scan exporter
+Description=Lambada Web (scan listing server)
 After=network.target
 
 [Service]
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/workspace/lambada
-ExecStart=/usr/bin/env ./lambada
+ExecStart=/usr/bin/env ./lambada-web
 Restart=on-failure
 
 [Install]

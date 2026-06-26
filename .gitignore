@@ -9,8 +9,10 @@
 *.dylib
 *.swp
 
-# Build output
-lambada
+# Build output (root-anchored so this doesn't also match the
+# cmd/lambada-mta/ and cmd/lambada-web/ source directories)
+/lambada-mta
+/lambada-web
 
 # Go modules download cache
 vendor/
