@@ -4,10 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/workspace/lambada
-ExecStart=/usr/bin/env ./lambada-mta
+User=woodie
+WorkingDirectory=/home/woodie/workspace/lambada
+ExecStart=/home/woodie/workspace/lambada/lambada-mta
 Restart=always
+# Matching lambada-web.service's LimitNOFILE -- mta hasn't shown the same
+# symptom, but there's no reason to leave it on a stingier default fd
+# ceiling than its sibling service.
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target

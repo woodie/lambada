@@ -270,13 +270,50 @@ func newMux() *http.ServeMux {
 	return mux
 }
 
+// Connection timeouts for the http.Server lambada-web runs. The bare
+// http.ListenAndServe(addr, handler) helper used previously builds a
+// zero-value http.Server, and every one of ReadTimeout, ReadHeaderTimeout,
+// WriteTimeout, and IdleTimeout defaults to 0 there -- i.e. "wait forever."
+// A client that opens a keep-alive connection and then goes quiet (a
+// laptop sleeping mid-request, a flaky Wi-Fi hop, zouk reconnecting
+// without cleanly closing the old socket) ties up a goroutine and a file
+// descriptor on the Pi forever. lambada-web.service's Restart=always never
+// fires to clear this because the process never actually crashes -- it
+// just silently accumulates leaked connections for as long as it's been
+// running, until new clients can't get in at all even though systemd
+// still reports it "active". This was the root cause behind
+// https://github.com/woodie/lambada/issues/2: restarting the process by
+// hand "fixed" it only because that reset the leak count to zero, not
+// because manually backgrounding it is mechanically different from
+// systemd's Type=simple -- it isn't. See docs/COWORK.md.
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
+// newServer builds the http.Server lambada-web actually runs, with the
+// timeouts above applied -- pulled out of main so they're unit-testable
+// without binding a real listener.
+func newServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+}
+
 func main() {
 	if err := os.MkdirAll(scanDir, 0755); err != nil {
 		log.Fatalf("Cannot create scan directory: %v", err)
 	}
 
 	log.Printf("lambada-web listening on %s, serving %s", listenAddr, scanDir)
-	if err := http.ListenAndServe(listenAddr, newMux()); err != nil {
+	if err := newServer(listenAddr, newMux()).ListenAndServe(); err != nil {
 		log.Fatalf("HTTP server error: %v", err)
 	}
 }

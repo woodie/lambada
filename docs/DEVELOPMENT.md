@@ -137,7 +137,27 @@ The service files live at `service/lambada-mta.service` and
 sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now lambada-mta lambada-web
-sudo systemctl status lambada-mta lambada-web
+sudo systemctl status lambada-mta lambada-web --no-pager
+```
+
+`systemctl status` pages its output through `less` by default. Over SSH
+that's easy to mistake for a hung shell -- `--no-pager` (above) avoids it;
+if you forget, `q` exits the pager (not Ctrl-C).
+
+Both unit files set `LimitNOFILE=65536`, well above systemd's stingier
+per-service default. This is a backstop, not the fix -- the actual fix for
+[issue #2](https://github.com/woodie/lambada/issues/2) is `newServer()`'s
+explicit timeouts in `cmd/lambada-web/main.go`. But it explains why the bug
+showed up fast under systemd and slow under a manual background: both leak
+identically, they just hit different ceilings. To check how many file
+descriptors a running instance currently holds (rising over time without
+plateauing means it's still leaking):
+
+```bash
+sudo ls -la /proc/$(pgrep lambada-web)/fd | wc -l
+sudo ss -tanp | grep lambada-web   # -a is required -- without it ss only shows
+                                    # ESTABLISHED sockets and silently omits the
+                                    # CLOSE-WAIT/FIN-WAIT ones a leak actually piles up in
 ```
 
 Port 25 is redirected to 2525, and port 80 to 8080, via iptables so both
@@ -146,4 +166,38 @@ services can run as a non-root user:
 ```bash
 sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+```
+
+### Verifying or resetting the iptables redirect
+
+The commands above add to `PREROUTING` -- they don't replace what's
+already there, and nothing persists the result across a reboot (no
+`iptables-persistent`/`netfilter-persistent` installed by default). Re-run
+them after every setup attempt or reboot and you'll eventually end up with
+duplicate/conflicting rules -- a "hot mess," per
+[issue #1](https://github.com/woodie/lambada/issues/1).
+
+Check what's actually there:
+
+```bash
+sudo iptables -t nat -L PREROUTING -n -v
+```
+
+Correct output has exactly one `REDIRECT` line per port:
+
+```
+Chain PREROUTING (policy ACCEPT 123K packets, 25M bytes)
+ pkts bytes target     prot opt in     out     source        destination
+    1    64 REDIRECT   6    --  *      *       0.0.0.0/0     0.0.0.0/0      tcp dpt:25 redir ports 2525
+   33  2112 REDIRECT   6    --  *      *       0.0.0.0/0     0.0.0.0/0      tcp dpt:80 redir ports 8080
+```
+
+If it looks like a mess (duplicates, wrong ports, leftover rules from
+testing), wipe `PREROUTING` and reapply cleanly:
+
+```bash
+sudo iptables -t nat -F PREROUTING
+sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+sudo netfilter-persistent save   # if installed -- otherwise this resets on reboot anyway
 ```

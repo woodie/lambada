@@ -63,7 +63,7 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now lambada-mta lambada-web
-sudo systemctl status lambada-mta lambada-web
+sudo systemctl status lambada-mta lambada-web --no-pager
 
 # Scan something and watch the logs
 sudo tail -f /var/log/syslog
