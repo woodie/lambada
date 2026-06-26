@@ -69,4 +69,4 @@ sudo systemctl status lambada-mta lambada-web
 sudo tail -f /var/log/syslog
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for testing and configuration details.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for testing and configuration details.
