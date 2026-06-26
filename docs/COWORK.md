@@ -14,6 +14,40 @@ Read `README.md` first for the user-facing description and API
 contract. This doc is about *how the project got here* and *how to keep
 working on it consistently*.
 
+## Why Go, and what it costs
+
+The short version of how lambada exists at all: `scandalous`
+(Ruby/Sinatra + Puma) was hand-built after a previous postfix +
+Gmail-with-an-app-specific-password setup stopped working once Google
+killed that auth method. Actually getting scans off it turned out to be
+its own saga -- [zouk's README](https://github.com/woodie/zouk) lays out
+why: downloading over plain HTTP means browser warnings about unsafe
+files, setting up HTTPS on a home network is "an absolute pain," and
+Samba -- the obvious third option -- is slow and awkward, especially on
+a Pi. lambada itself actually started as a Samba-friendly MTA for that
+exact reason, before discovering Samba on a Pi performs too poorly to
+be worth it.
+
+The fix that actually worked wasn't more infrastructure. Rather than
+building an OAuth2 proxy + nginx + DDNS + a hole in the home firewall to
+expose scandalous-web safely to the outside, a JSON API got hacked into
+scandalous-web in about five minutes, and zouk -- a small native Mac
+client that talks to that API directly over the LAN -- came together in
+a couple of hours. No HTTPS, no public exposure, no Samba: zouk plus a
+lightweight backend answered all three of those complaints at once.
+
+Porting that backend from Ruby to Go (lambada) wasn't because anything
+was wrong with scandalous-web -- there wasn't. It was that only one
+specific Ruby patch version (3.1.2p20) actually ran on the Pi, and
+chasing that kind of version pinning forever felt worse than just
+rewriting the thing. So: "what could possibly go wrong?" Issue #2 is the
+literal answer -- Puma absorbs a whole class of HTTP-server footgun that
+Go's stdlib hands back to whoever writes `main()`, and lambada walked
+straight into it. That's not an argument against Go, just the honest
+price of leaving a mature framework's defaults behind. The result today:
+real production use by the family, who are, by all accounts, thrilled
+with how much easier this is than what came before.
+
 ## Sandbox limitation -- read this before touching Go code
 
 There is **no Go toolchain in the Cowork sandbox** (confirmed: no `go`
@@ -50,8 +84,13 @@ on the Pi in production, and both addressed this session:
   `iptables-persistent`/`netfilter-persistent`), so it's gone after every
   reboot unless reapplied or saved.
 - **[#2, "Properly background lambada-web"](https://github.com/woodie/lambada/issues/2)**
-  -- two symptoms reported together under one title, root-caused
-  separately:
+  -- a previous session got as far as the `systemctl` pager hang and
+  stopped there; the actual connection-handling bug went undiagnosed,
+  and woodie ended up living with the `setsid nohup ... & disown`
+  workaround rather than getting a real fix (or giving up on lambada-web
+  and going back to scandalous-web, which it wasn't quite bad enough to
+  justify). Two symptoms reported together under one title, root-caused
+  separately this session:
   1. `sudo systemctl status lambada-mta lambada-web` hung the shell,
      needing Ctrl-C. That's just `less` paging interactively over SSH,
      not an app bug. Fixed by adding `--no-pager` to the status commands
