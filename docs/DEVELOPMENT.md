@@ -131,7 +131,14 @@ Example output:
 ## systemd Services
 
 The service files live at `service/lambada-mta.service` and
-`service/lambada-web.service`. To install both on Raspberry Pi:
+`service/lambada-web.service`, written for the default Raspberry Pi OS
+`pi` user/home directory. If your Pi runs as a different user (this
+project's own Pi runs as `woodie`, not `pi`), edit `User=`,
+`WorkingDirectory=`, and `ExecStart=` in your local copy after `cp`-ing
+them in below -- don't commit that change back, since it'd break the
+default for everyone else cloning the repo.
+
+To install both on Raspberry Pi:
 
 ```bash
 sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/

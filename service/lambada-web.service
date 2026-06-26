@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=woodie
-WorkingDirectory=/home/woodie/workspace/lambada
-ExecStart=/home/woodie/workspace/lambada/lambada-web
+User=pi
+WorkingDirectory=/home/pi/workspace/lambada
+ExecStart=/home/pi/workspace/lambada/lambada-web
 Restart=always
 # Defense-in-depth alongside the newServer() timeout fix in main.go: a
 # zero-value http.Server (the bug behind #2) leaks one fd per connection

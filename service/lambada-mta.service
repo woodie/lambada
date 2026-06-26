@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=woodie
-WorkingDirectory=/home/woodie/workspace/lambada
-ExecStart=/home/woodie/workspace/lambada/lambada-mta
+User=pi
+WorkingDirectory=/home/pi/workspace/lambada
+ExecStart=/home/pi/workspace/lambada/lambada-mta
 Restart=always
 # Matching lambada-web.service's LimitNOFILE -- mta hasn't shown the same
 # symptom, but there's no reason to leave it on a stingier default fd

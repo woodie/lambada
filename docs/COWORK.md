@@ -93,16 +93,17 @@ on the Pi in production, and both addressed this session:
 woodie pasted real `ps aux` / `systemctl status --no-pager` output partway
 through this session. Two things it caught, both fixed:
 
-- **`service/*.service` had the wrong user/path baked in.** Both files
-  said `User=pi` / `/home/pi/workspace/lambada`. The actual box is
-  `woodie@rackspace`, repo cloned to `/home/woodie/workspace/lambada` --
-  matching `scandalous`'s services, which already correctly use
-  `User=woodie`. Whatever's installed at `/etc/systemd/system/` on the
-  real Pi right now must already differ from what was checked into this
-  repo (it clearly started fine and found the binary), so this was a
-  repo/reality drift bug, not what's live -- but the next `cp` from this
-  repo would have overwritten a working config with a broken one. Fixed:
-  both files now say `User=woodie` / `/home/woodie/workspace/lambada`.
+- **`service/*.service` says `User=pi` / `/home/pi/workspace/lambada` --
+  on purpose, don't "fix" this again.** `pi` is the default Raspberry Pi
+  OS user; the checked-in files are a template for whoever else clones
+  this repo, most of whom will actually be running as `pi`. This
+  project's own Pi happens to run as `woodie` instead (unlike
+  `scandalous`, which is woodie-personal and was never meant for anyone
+  else to deploy, so hardcoding `User=woodie` there is fine). Mid-session
+  this got edited to `User=woodie` directly in the repo before that
+  distinction was caught -- reverted. If you're deploying on a Pi where
+  the user isn't `pi`, edit your local copy of the service file after
+  `cp`-ing it to `/etc/systemd/system/`, and don't commit that edit back.
 - **The timeline confirms the leak theory and explains the asymmetry.**
   systemd started `lambada-web.service` at 03:55:24, logged it listening
   fine, then woodie stopped it by hand at 04:28:53 -- just 33 minutes
