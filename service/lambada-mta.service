@@ -7,7 +7,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/workspace/lambada
 ExecStart=/usr/bin/env ./lambada-mta
-Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
