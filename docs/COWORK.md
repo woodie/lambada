@@ -29,12 +29,13 @@ exact reason, before discovering Samba on a Pi performs too poorly to
 be worth it.
 
 The fix that actually worked wasn't more infrastructure. Rather than
-building an OAuth2 proxy + nginx + DDNS + a hole in the home firewall to
-expose scandalous-web safely to the outside, a JSON API got hacked into
-scandalous-web in about five minutes, and zouk -- a small native Mac
-client that talks to that API directly over the LAN -- came together in
-a couple of hours. No HTTPS, no public exposure, no Samba: zouk plus a
-lightweight backend answered all three of those complaints at once.
+building a Certbot + oauth2-proxy + nginx + DDNS + a hole in the home
+firewall to expose scandalous-web safely to the outside, a JSON API got
+hacked into scandalous-web in about five minutes, and zouk -- a small
+native Mac client that talks to that API directly over the LAN -- came
+together in a couple of hours. No HTTPS, no public exposure, no Samba:
+zouk plus a lightweight backend answered all three of those complaints
+at once.
 
 Porting that backend from Ruby to Go (lambada) wasn't because anything
 was wrong with scandalous-web -- there wasn't. It was that only one

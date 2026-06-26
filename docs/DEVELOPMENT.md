@@ -71,6 +71,10 @@ ginkgo -r -v
 ginkgo -v ./cmd/lambada-mta
 ginkgo -v ./cmd/lambada-web
 
+# Try format documentation
+ginkgo -fd cmd/*
+ginkgo-fd cmd/*
+
 # Plain `go test` works too
 go test ./...
 ```

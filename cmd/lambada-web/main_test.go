@@ -21,7 +21,7 @@ func get(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-var _ = Describe("lambada-web", func() {
+var _ = Describe("Lambada WEB", func() {
 	var (
 		mux  *http.ServeMux
 		file string
@@ -36,6 +36,7 @@ var _ = Describe("lambada-web", func() {
 	writeFile := func() {
 		Expect(os.WriteFile(filepath.Join(scanDir, file), []byte("content"), 0o644)).To(Succeed())
 	}
+
 
 	Describe("GET /", func() {
 		Context("with no files", func() {

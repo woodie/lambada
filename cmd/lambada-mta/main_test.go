@@ -39,7 +39,7 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 	"\r\n" + base64.StdEncoding.EncodeToString([]byte("fake pdf content")) + "\r\n" +
 	"--boundary--\r\n"
 
-var _ = Describe("Lambada", func() {
+var _ = Describe("Lambada MTA", func() {
 
 	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
 
