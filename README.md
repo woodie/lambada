@@ -1,4 +1,4 @@
-# Lambada scan exporter
+# Lambada scan server
 
 [![go.mod version](https://img.shields.io/github/go-mod/go-version/woodie/lambada)](https://github.com/woodie/lambada)
 [![CI](https://github.com/woodie/lambada/actions/workflows/go.yml/badge.svg)](https://github.com/woodie/lambada/actions/workflows/go.yml)
