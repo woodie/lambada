@@ -164,6 +164,38 @@ through this session. Two things it caught, both fixed:
   matched `ps aux`) -- the asymmetry is specific to `lambada-web`'s HTTP
   keep-alive handling, not a systemd-wide problem.
 
+## Comment philosophy
+
+Code comments explain current, non-obvious behavior -- not how the code
+got here. Refactor history, rejected libraries, "this used to hand-roll
+X" -- that belongs in this file, not in `main.go`. Picking a well-known
+library to do an obvious thing (formatting bytes, formatting durations)
+shouldn't need a comment defending the choice.
+
+`humanSize`/`timeAgo` went through three shapes before landing:
+
+1. The initial Ruby->Go port hand-rolled Rails-clone helpers
+   (`humanSize`, `timeAgoInWords`) directly in `main.go`, feeding a
+   `toViewData`/`viewScan` layer that pre-formatted each scan before
+   handing it to the template -- a port artifact, not a deliberate
+   choice.
+2. Looked for a byte-for-byte match of Rails' `number_to_human_size`/
+   `distance_of_time_in_words` (`gonumbers`) -- rejected, it has real
+   bugs at small `n`. No library matches Rails' exact wording *and* is
+   bug-free, so simplicity won: swapped in `github.com/dustin/go-humanize`
+   (`Bytes`) and `github.com/justincampbell/timeago` (`FromDuration`),
+   still wired through `toViewData`. Confirmed via `ginkgo -r -v`
+   (37/37 passing).
+3. Final shape: deleted `toViewData`/`viewScan` entirely.
+   `listing.html.tmpl` now calls `humanSize`/`timeAgo` directly via
+   `template.FuncMap`, the same way `scandalous/views/listing.erb` calls
+   `number_to_human_size`/`time_ago_in_words` inline rather than
+   pre-formatting in Ruby. One deliberate deviation from the ERB: Go's
+   `timeAgo` takes an explicit `now time.Time` (threaded into the
+   template as `{{$now := .Now}}`) instead of calling `time.Now()`
+   internally, to keep age calculations dependency-injectable and
+   testable.
+
 ## Next up
 
 - Confirm on real hardware: `go build ./...`, `go test ./...` (or

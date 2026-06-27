@@ -9,14 +9,15 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/justincampbell/timeago"
 )
 
 var (
@@ -30,7 +31,9 @@ var templatesFS embed.FS
 //go:embed static/style.css
 var styleCSS []byte
 
-var listingTemplate = template.Must(template.ParseFS(templatesFS, "templates/listing.html.tmpl"))
+// ScanFiles -- reads the scan directory and shapes the result for callers.
+// Go port of scandalous's ScanFiles class; mirrored in main_test.go as its
+// own top-level group, same split as the Ruby specs.
 
 // scan describes one file available for download.
 type scan struct {
@@ -69,136 +72,6 @@ func listing(dir string) ([]scan, error) {
 	return scans, nil
 }
 
-// humanSize renders a byte count the way Rails' ActionView
-// number_to_human_size does by default: "7 Bytes", "1 Byte", "1.21 KB",
-// "5 GB", etc. -- rounded to three significant digits with trailing zeros
-// trimmed.
-func humanSize(size int64) string {
-	if size < 1024 {
-		if size == 1 {
-			return "1 Byte"
-		}
-		return fmt.Sprintf("%d Bytes", size)
-	}
-
-	units := []string{"KB", "MB", "GB", "TB", "PB", "EB"}
-	value := float64(size)
-	idx := 0
-	for value >= 1024 && idx < len(units)-1 {
-		value /= 1024
-		idx++
-	}
-
-	return fmt.Sprintf("%s %s", formatSignificant(value, 3), units[idx-1])
-}
-
-// formatSignificant formats v to the given number of significant digits,
-// trimming any trailing zeros (and a trailing decimal point).
-func formatSignificant(v float64, sig int) string {
-	if v <= 0 {
-		return "0"
-	}
-	digitsBeforePoint := int(math.Floor(math.Log10(v))) + 1
-	decimals := sig - digitsBeforePoint
-	if decimals < 0 {
-		decimals = 0
-	}
-	s := strconv.FormatFloat(v, 'f', decimals, 64)
-	if strings.Contains(s, ".") {
-		s = strings.TrimRight(s, "0")
-		s = strings.TrimRight(s, ".")
-	}
-	return s
-}
-
-// timeAgoInWords mirrors Rails' ActionView time_ago_in_words(from), called
-// without `include_seconds: true` -- the same way listing.erb calls it.
-// That means anything under 30 seconds reads "less than a minute" rather
-// than dropping down to seconds-level granularity.
-func timeAgoInWords(from, to time.Time) string {
-	minutes := int(math.Round(to.Sub(from).Minutes()))
-	if minutes < 0 {
-		minutes = -minutes
-	}
-
-	switch {
-	case minutes == 0:
-		return "less than a minute"
-	case minutes == 1:
-		return "1 minute"
-	case minutes < 45:
-		return fmt.Sprintf("%d minutes", minutes)
-	case minutes < 90:
-		return "about 1 hour"
-	case minutes < 1440:
-		return fmt.Sprintf("about %d hours", roundDiv(minutes, 60))
-	case minutes < 2520:
-		return "1 day"
-	case minutes < 43200:
-		return fmt.Sprintf("%d days", roundDiv(minutes, 1440))
-	case minutes < 86400:
-		return fmt.Sprintf("about %d months", roundDiv(minutes, 43200))
-	case minutes < 525600:
-		return fmt.Sprintf("%d months", roundDiv(minutes, 43200))
-	default:
-		// Simplified vs. Rails' leap-year-aware "about/over/almost X years"
-		// -- a home scanner's listing realistically never gets this stale.
-		return fmt.Sprintf("about %d years", roundDiv(minutes, 525600))
-	}
-}
-
-func roundDiv(n, d int) int {
-	return int(math.Round(float64(n) / float64(d)))
-}
-
-type viewScan struct {
-	Name      string
-	HumanSize string
-	TimeAgo   string
-}
-
-type viewData struct {
-	Scans []viewScan
-}
-
-// toViewData converts a raw scan listing into the shape listing.html.tmpl
-// renders, formatting each scan's size and age relative to now -- pulled
-// out of handleIndex so it's unit-testable without going through
-// net/http/httptest.
-func toViewData(scans []scan, now time.Time) viewData {
-	data := viewData{Scans: make([]viewScan, 0, len(scans))}
-	for _, s := range scans {
-		data.Scans = append(data.Scans, viewScan{
-			Name:      s.Name,
-			HumanSize: humanSize(s.Size),
-			TimeAgo:   timeAgoInWords(s.Time, now),
-		})
-	}
-	return data
-}
-
-// handleIndex is registered under the "GET /{$}" pattern, which (unlike a
-// bare "/") only matches the exact root path -- everything else falls
-// through to a 404, matching Sinatra's behavior for unmatched routes.
-func handleIndex(w http.ResponseWriter, r *http.Request) {
-	scans, err := listing(scanDir)
-	if err != nil {
-		log.Printf("listing error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := listingTemplate.Execute(w, toViewData(scans, time.Now())); err != nil {
-		log.Printf("template error: %v", err)
-	}
-}
-
-func handleStyle(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	_, _ = w.Write(styleCSS)
-}
-
 type scanJSON struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
@@ -221,6 +94,94 @@ func toScansJSON(scans []scan) []scanJSON {
 		})
 	}
 	return out
+}
+
+// Server -- the http.Server lambada-web actually runs, and the timeouts it
+// needs to avoid issue #2 (see docs/COWORK.md). Mirrored in main_test.go as
+// its own top-level group, Server > newServer.
+
+// Connection timeouts for the http.Server lambada-web runs. The bare
+// http.ListenAndServe(addr, handler) helper used previously builds a
+// zero-value http.Server, and every one of ReadTimeout, ReadHeaderTimeout,
+// WriteTimeout, and IdleTimeout defaults to 0 there -- i.e. "wait forever."
+// A client that opens a keep-alive connection and then goes quiet (a
+// laptop sleeping mid-request, a flaky Wi-Fi hop, zouk reconnecting
+// without cleanly closing the old socket) ties up a goroutine and a file
+// descriptor on the Pi forever. lambada-web.service's Restart=always never
+// fires to clear this because the process never actually crashes -- it
+// just silently accumulates leaked connections for as long as it's been
+// running, until new clients can't get in at all even though systemd
+// still reports it "active". This was the root cause behind
+// https://github.com/woodie/lambada/issues/2: restarting the process by
+// hand "fixed" it only because that reset the leak count to zero, not
+// because manually backgrounding it is mechanically different from
+// systemd's Type=simple -- it isn't. See docs/COWORK.md.
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
+// newServer builds the http.Server lambada-web actually runs, with the
+// timeouts above applied -- pulled out of main so they're unit-testable
+// without binding a real listener.
+func newServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+}
+
+// Lambada WEB -- the HTTP routes and the page/JSON they serve. Mirrored in
+// main_test.go as the Lambada WEB group (GET /, GET /download/{filename},
+// GET /scans.json, GET /style.css).
+
+// listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
+// directly from the template -- same shape as listing.erb calling
+// number_to_human_size/time_ago_in_words inline.
+var listingTemplate = template.Must(
+	template.New("listing.html.tmpl").
+		Funcs(template.FuncMap{
+			"humanSize": func(size int64) string { return humanize.Bytes(uint64(size)) },
+			"timeAgo":   func(t, now time.Time) string { return timeago.FromDuration(now.Sub(t).Abs()) },
+		}).
+		ParseFS(templatesFS, "templates/listing.html.tmpl"),
+)
+
+// listingData is what listing.html.tmpl renders: the raw scan listing plus
+// the request time, since the template needs both to compute each scan's
+// age via the timeAgo func.
+type listingData struct {
+	Scans []scan
+	Now   time.Time
+}
+
+// handleIndex is registered under the "GET /{$}" pattern, which (unlike a
+// bare "/") only matches the exact root path -- everything else falls
+// through to a 404, matching Sinatra's behavior for unmatched routes.
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	scans, err := listing(scanDir)
+	if err != nil {
+		log.Printf("listing error: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	data := listingData{Scans: scans, Now: time.Now()}
+	if err := listingTemplate.Execute(w, data); err != nil {
+		log.Printf("template error: %v", err)
+	}
+}
+
+func handleStyle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	_, _ = w.Write(styleCSS)
 }
 
 func handleScansJSON(w http.ResponseWriter, r *http.Request) {
@@ -268,43 +229,6 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("GET /scans.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
 	return mux
-}
-
-// Connection timeouts for the http.Server lambada-web runs. The bare
-// http.ListenAndServe(addr, handler) helper used previously builds a
-// zero-value http.Server, and every one of ReadTimeout, ReadHeaderTimeout,
-// WriteTimeout, and IdleTimeout defaults to 0 there -- i.e. "wait forever."
-// A client that opens a keep-alive connection and then goes quiet (a
-// laptop sleeping mid-request, a flaky Wi-Fi hop, zouk reconnecting
-// without cleanly closing the old socket) ties up a goroutine and a file
-// descriptor on the Pi forever. lambada-web.service's Restart=always never
-// fires to clear this because the process never actually crashes -- it
-// just silently accumulates leaked connections for as long as it's been
-// running, until new clients can't get in at all even though systemd
-// still reports it "active". This was the root cause behind
-// https://github.com/woodie/lambada/issues/2: restarting the process by
-// hand "fixed" it only because that reset the leak count to zero, not
-// because manually backgrounding it is mechanically different from
-// systemd's Type=simple -- it isn't. See docs/COWORK.md.
-const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 10 * time.Second
-	writeTimeout      = 10 * time.Second
-	idleTimeout       = 60 * time.Second
-)
-
-// newServer builds the http.Server lambada-web actually runs, with the
-// timeouts above applied -- pulled out of main so they're unit-testable
-// without binding a real listener.
-func newServer(addr string, handler http.Handler) *http.Server {
-	return &http.Server{
-		Addr:              addr,
-		Handler:           handler,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       idleTimeout,
-	}
 }
 
 func main() {

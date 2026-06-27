@@ -21,6 +21,94 @@ func get(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// ScanFiles mirrors scandalous's ScanFiles class -- listing/toScansJSON are
+// the Go port of its #listing/#scans_json, kept as their own top-level
+// group, same split as the Ruby specs and the same order as main.go.
+var _ = Describe("ScanFiles", func() {
+	Describe("listing", func() {
+		var dir string
+
+		BeforeEach(func() {
+			dir = GinkgoT().TempDir()
+		})
+
+		It("returns an empty slice for an empty directory", func() {
+			scans, err := listing(dir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scans).To(BeEmpty())
+		})
+
+		It("returns one entry per *.pdf file, ignoring other extensions", func() {
+			Expect(os.WriteFile(filepath.Join(dir, "1234567890.pdf"), []byte("content"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignore me"), 0o644)).To(Succeed())
+
+			scans, err := listing(dir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scans).To(HaveLen(1))
+			Expect(scans[0].Name).To(Equal("1234567890.pdf"))
+			Expect(scans[0].Size).To(Equal(int64(7)))
+		})
+
+		It("sorts newest filename first", func() {
+			Expect(os.WriteFile(filepath.Join(dir, "1000000000.pdf"), []byte("a"), 0o644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, "2000000000.pdf"), []byte("b"), 0o644)).To(Succeed())
+
+			scans, err := listing(dir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scans).To(HaveLen(2))
+			Expect(scans[0].Name).To(Equal("2000000000.pdf"))
+			Expect(scans[1].Name).To(Equal("1000000000.pdf"))
+		})
+	})
+
+	Describe("toScansJSON", func() {
+		It("returns an empty slice for no scans", func() {
+			Expect(toScansJSON(nil)).To(BeEmpty())
+		})
+
+		It("maps each scan to its API shape", func() {
+			when := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+			scans := []scan{{Name: "1234567890.pdf", Time: when, Size: 7}}
+
+			Expect(toScansJSON(scans)).To(Equal([]scanJSON{
+				{
+					Name: "1234567890.pdf",
+					Size: 7,
+					Time: when.Format(time.RFC3339),
+					URL:  "/download/1234567890.pdf",
+				},
+			}))
+		})
+	})
+})
+
+// Server mirrors main.go's Server section -- newServer is the constructor
+// these tests guard, including the issue #2 regression check.
+var _ = Describe("Server", func() {
+	Describe("newServer", func() {
+		It("sets the address and handler", func() {
+			mux := newMux()
+			srv := newServer("0.0.0.0:9090", mux)
+			Expect(srv.Addr).To(Equal("0.0.0.0:9090"))
+			Expect(srv.Handler).To(BeIdenticalTo(mux))
+		})
+
+		// Regression test for https://github.com/woodie/lambada/issues/2: a
+		// zero-value http.Server (what the old http.ListenAndServe(addr,
+		// handler) helper built) leaves every timeout at 0, i.e. "never" --
+		// which is how leaked keep-alive connections piled up until new
+		// clients couldn't connect at all. This just has to fail loudly if a
+		// future edit accidentally drops back to a zero-value server.
+		It("sets every timeout to a nonzero value", func() {
+			srv := newServer("0.0.0.0:9090", newMux())
+			Expect(srv.ReadHeaderTimeout).To(BeNumerically(">", 0))
+			Expect(srv.ReadTimeout).To(BeNumerically(">", 0))
+			Expect(srv.WriteTimeout).To(BeNumerically(">", 0))
+			Expect(srv.IdleTimeout).To(BeNumerically(">", 0))
+		})
+	})
+})
+
 var _ = Describe("Lambada WEB", func() {
 	var (
 		mux  *http.ServeMux
@@ -37,7 +125,6 @@ var _ = Describe("Lambada WEB", func() {
 		Expect(os.WriteFile(filepath.Join(scanDir, file), []byte("content"), 0o644)).To(Succeed())
 	}
 
-
 	Describe("GET /", func() {
 		Context("with no files", func() {
 			It("renders the empty state", func() {
@@ -48,16 +135,18 @@ var _ = Describe("Lambada WEB", func() {
 			})
 		})
 
-		// Exact size/age formatting is unit-tested directly against
-		// toViewData/humanSize/timeAgoInWords below -- this just checks the
-		// page renders a link to the file.
+		// Mirrors scandalous/spec/web_spec.rb's "file description" test --
+		// asserts the rendered size/age text directly rather than
+		// unit-testing the formatting separately.
 		Context("with a file", func() {
 			BeforeEach(writeFile)
 
-			It("renders a download link for the file", func() {
+			It("renders a download link with the file's size and age", func() {
 				rec := get(mux, "/")
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Body.String()).To(ContainSubstring("/download/" + file))
+				Expect(rec.Body.String()).To(ContainSubstring("7 B"))
+				Expect(rec.Body.String()).To(ContainSubstring("less than a minute ago"))
 			})
 		})
 	})
@@ -96,7 +185,7 @@ var _ = Describe("Lambada WEB", func() {
 		})
 
 		// The exact JSON shape (name/size/time/url) is unit-tested directly
-		// against toScansJSON below -- this just checks the route is wired
+		// against toScansJSON above -- this just checks the route is wired
 		// up to it.
 		Context("with a file", func() {
 			BeforeEach(writeFile)
@@ -121,125 +210,3 @@ var _ = Describe("Lambada WEB", func() {
 		})
 	})
 })
-
-var _ = Describe("listing", func() {
-	var dir string
-
-	BeforeEach(func() {
-		dir = GinkgoT().TempDir()
-	})
-
-	It("returns an empty slice for an empty directory", func() {
-		scans, err := listing(dir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(scans).To(BeEmpty())
-	})
-
-	It("returns one entry per *.pdf file, ignoring other extensions", func() {
-		Expect(os.WriteFile(filepath.Join(dir, "1234567890.pdf"), []byte("content"), 0o644)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignore me"), 0o644)).To(Succeed())
-
-		scans, err := listing(dir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(scans).To(HaveLen(1))
-		Expect(scans[0].Name).To(Equal("1234567890.pdf"))
-		Expect(scans[0].Size).To(Equal(int64(7)))
-	})
-
-	It("sorts newest filename first", func() {
-		Expect(os.WriteFile(filepath.Join(dir, "1000000000.pdf"), []byte("a"), 0o644)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(dir, "2000000000.pdf"), []byte("b"), 0o644)).To(Succeed())
-
-		scans, err := listing(dir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(scans).To(HaveLen(2))
-		Expect(scans[0].Name).To(Equal("2000000000.pdf"))
-		Expect(scans[1].Name).To(Equal("1000000000.pdf"))
-	})
-})
-
-var _ = Describe("newServer", func() {
-	It("sets the address and handler", func() {
-		mux := newMux()
-		srv := newServer("0.0.0.0:9090", mux)
-		Expect(srv.Addr).To(Equal("0.0.0.0:9090"))
-		Expect(srv.Handler).To(BeIdenticalTo(mux))
-	})
-
-	// Regression test for https://github.com/woodie/lambada/issues/2: a
-	// zero-value http.Server (what the old http.ListenAndServe(addr,
-	// handler) helper built) leaves every timeout at 0, i.e. "never" --
-	// which is how leaked keep-alive connections piled up until new
-	// clients couldn't connect at all. This just has to fail loudly if a
-	// future edit accidentally drops back to a zero-value server.
-	It("sets every timeout to a nonzero value", func() {
-		srv := newServer("0.0.0.0:9090", newMux())
-		Expect(srv.ReadHeaderTimeout).To(BeNumerically(">", 0))
-		Expect(srv.ReadTimeout).To(BeNumerically(">", 0))
-		Expect(srv.WriteTimeout).To(BeNumerically(">", 0))
-		Expect(srv.IdleTimeout).To(BeNumerically(">", 0))
-	})
-})
-
-var _ = Describe("toScansJSON", func() {
-	It("returns an empty slice for no scans", func() {
-		Expect(toScansJSON(nil)).To(BeEmpty())
-	})
-
-	It("maps each scan to its API shape", func() {
-		when := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
-		scans := []scan{{Name: "1234567890.pdf", Time: when, Size: 7}}
-
-		Expect(toScansJSON(scans)).To(Equal([]scanJSON{
-			{
-				Name: "1234567890.pdf",
-				Size: 7,
-				Time: when.Format(time.RFC3339),
-				URL:  "/download/1234567890.pdf",
-			},
-		}))
-	})
-})
-
-var _ = Describe("toViewData", func() {
-	It("returns no scans for an empty listing", func() {
-		Expect(toViewData(nil, time.Now()).Scans).To(BeEmpty())
-	})
-
-	It("formats each scan's size and age", func() {
-		now := time.Now()
-		scans := []scan{{Name: "1234567890.pdf", Time: now, Size: 7}}
-
-		Expect(toViewData(scans, now).Scans).To(Equal([]viewScan{
-			{Name: "1234567890.pdf", HumanSize: "7 Bytes", TimeAgo: "less than a minute"},
-		}))
-	})
-})
-
-var _ = DescribeTable("humanSize",
-	func(size int64, want string) {
-		Expect(humanSize(size)).To(Equal(want))
-	},
-	Entry("zero bytes", int64(0), "0 Bytes"),
-	Entry("one byte", int64(1), "1 Byte"),
-	Entry("plain bytes", int64(7), "7 Bytes"),
-	Entry("just under a KB", int64(1023), "1023 Bytes"),
-	Entry("exactly a KB", int64(1024), "1 KB"),
-	Entry("fractional KB", int64(1234), "1.21 KB"),
-	Entry("exactly a MB", int64(1048576), "1 MB"),
-)
-
-var _ = DescribeTable("timeAgoInWords",
-	func(ago time.Duration, want string) {
-		now := time.Now()
-		Expect(timeAgoInWords(now.Add(-ago), now)).To(Equal(want))
-	},
-	Entry("just now", 0*time.Second, "less than a minute"),
-	Entry("20 seconds ago", 20*time.Second, "less than a minute"),
-	Entry("90 seconds ago", 90*time.Second, "2 minutes"),
-	Entry("5 minutes ago", 5*time.Minute, "5 minutes"),
-	Entry("1 hour ago", 60*time.Minute, "about 1 hour"),
-	Entry("2 hours ago", 2*time.Hour, "about 2 hours"),
-	Entry("1 day ago", 24*time.Hour, "1 day"),
-	Entry("3 days ago", 72*time.Hour, "3 days"),
-)
