@@ -5,14 +5,14 @@
 [![Release](https://img.shields.io/github/v/release/woodie/lambada.svg)](https://github.com/woodie/lambada/releases/latest)
 [![License](https://img.shields.io/github/license/woodie/lambada.svg)](LICENSE)
 
-Two minimal Go services for a scanner/printer that requires an open relay to
-e-mail out scans. Run them on a **Raspberry Pi** to receive scans by e-mail
-and browse or download them from your home network.
+Have an old Scanner/Printer that requires an open relay to e-mail out scans?
+Now you can serve up scanned documents on your home network.
 
 <img width="193" height="226" alt="printer" src="https://github.com/user-attachments/assets/a1d7f795-6e4b-43ca-91a9-1d915b28fedc" />
 <img width="161" height="117" alt="piv1" src="https://github.com/user-attachments/assets/d4d1104a-7512-4310-a699-df8a36704b9b" /> &nbsp;
 <img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
-
+<br>
+<br>
 A lot of perfectly good scanners and printers end up in a landfill the
 day their cloud-email feature stops working -- usually because the auth
 method it depends on (an open relay, a now-revoked app password) quietly
