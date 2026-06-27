@@ -73,16 +73,26 @@ go mod tidy
 go build -o lambada-mta ./cmd/lambada-mta
 go build -o lambada-web ./cmd/lambada-web
 
-# Redirect port 25 -> 2525 and port 80 -> 8080 so both services can run as
-# a non-root user
+# Redirect port 25 -> 2525 so lambada-mta can run as a non-root user.
+# lambada-web doesn't need this -- it stays on 127.0.0.1:8080, and nginx
+# (below) is what's actually reachable on port 80.
 sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
-sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 
 # Install and start both services
 sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now lambada-mta lambada-web
 sudo systemctl status lambada-mta lambada-web --no-pager
+
+# Front lambada-web with nginx on port 80 (recommended). Prefer to skip
+# nginx and have lambada-web listen on 0.0.0.0:8080 directly instead? See
+# the LAMBADA_WEB_LISTEN_ADDR override in docs/DEVELOPMENT.md.
+sudo apt-get update
+sudo apt-get install -y nginx
+sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
+sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
 
 # Scan something and watch the logs
 sudo tail -f /var/log/syslog

@@ -208,6 +208,75 @@ shouldn't need a comment defending the choice.
    template/clock regardless of how `timeNow`'s value arrives, so the
    `.Now` plumbing wasn't earning its keep. Commit `cccb5b1`.
 
+## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
+
+Two new issues, filed this session, prompted by woodie noticing zouk's
+launch sometimes hangs on the running-dog screen until an unrelated
+browser `GET /` unsticks it -- not reproducible with the old Ruby/Puma
+`scandalous-web`:
+
+- **[#5](https://github.com/woodie/lambada/issues/5)** -- the bug report
+  itself, with a repro procedure for next time (watch `/proc/<pid>/fd`
+  live, trigger the hang, hit `GET /` from a browser, see whether the fd
+  count moves before or after). Investigated this session: fd count at
+  rest was a normal 8-9 (not a leak), the single iptables redirect rule
+  per port was clean (not issue #1 recurring), no shared lock between
+  `handleIndex`/`handleScansJSON`. Root cause **not confirmed** -- the bug
+  stopped reproducing mid-session before the live capture could happen.
+- **[#6](https://github.com/woodie/lambada/issues/6)** -- woodie's own
+  "try nginx in front of lambada" proposal, written up after talking
+  through whether a "smart person" suggesting nginx for X/Y/Z reasons
+  actually holds up for a homelab system handling a couple of connections
+  a week. It does, for two reasons that don't depend on
+  scaling/TLS/rate-limiting theater: nginx terminates the client
+  connection with its own decades-tuned timeout/keep-alive handling
+  before lambada-web ever sees it, and it lets the iptables port 80->8080
+  `PREROUTING` redirect (already flagged as fragile in issue #1) go away
+  entirely. The honest caveat, also from #6: this insulates against the
+  suspected cause of #5 rather than confirming what it actually was.
+
+Decided to try it anyway, with two safety nets woodie asked for
+explicitly:
+
+1. **A no-rebuild switch, not a hardcoded address.** `lambada-web`'s
+   `listenAddr` now defaults to `127.0.0.1:8080` (nginx-fronted), but
+   `LAMBADA_WEB_LISTEN_ADDR` overrides it -- set it to `0.0.0.0:8080` via
+   a `systemctl edit lambada-web` override to go back to the old
+   directly-exposed setup without touching code or rebuilding. The
+   narrower fix would have been to just hardcode `127.0.0.1:8080` and
+   call the iptables line dead; woodie wanted rollback to not require a
+   rebuild, so this is the one deliberate exception to "no flags or env
+   vars" in `docs/DEVELOPMENT.md`'s Configuration section.
+2. **A feature branch, not straight to `main`.** All of this -- the
+   `main.go` change, the new `service/lambada-web.nginx.conf`, and the
+   README.md/DEVELOPMENT.md doc updates -- is on `nginx-reverse-proxy`,
+   not `main`, specifically so it can be tried on the Pi and abandoned
+   without a revert if it doesn't earn its keep.
+
+`docs/DEVELOPMENT.md` gained a "Reverse proxy (nginx)" section (install +
+verify) and a "Rolling back to the iptables redirect" subsection under it;
+the old "port 25 and 80 redirected via iptables" text is now port-25-only,
+since lambada-web no longer needs a redirect by default.
+
+### A `.git` gotcha hit while doing this
+
+Running `git checkout -b` from the Cowork sandbox's bash mount against
+this same working copy raced with something else touching `.git` at the
+same time (most likely woodie's own Terminal on the actual Mac, since the
+folder is a live two-way mount, not a copy) and left `.git/index.lock`,
+`.git/packed-refs.lock.{x,x2,stale.<ts>}`, and
+`.git/refs/tags/0.3.0.lock.{x,x2,stale.<ts>}` behind -- conflict-renamed
+copies of git's own lockfiles, not names git itself would ever create.
+The `refs/tags/0.3.0.lock.*` ones are the nastier kind: anything that
+walks `refs/tags/*` (`git fsck`, `git tag`, `git push --tags`) tries to
+parse them as refs and fails with `invalid sha1 pointer`. None of it
+touched real history -- `main` and `nginx-reverse-proxy` both still point
+at `7f71178` -- but the sandbox couldn't delete the stray files itself
+(`Operation not permitted` on every one), so woodie cleaned them up by
+hand on the Mac. **Takeaway for next time:** don't run git commands from
+both sides (sandbox bash and a local Terminal) against the same mounted
+repo at once.
+
 ## Next up
 
 - Confirm on real hardware: `go build ./...`, `go test ./...` (or
@@ -226,7 +295,11 @@ shouldn't need a comment defending the choice.
   `attachmentDir`/`listenAddr`/`maxFileAge` (mta) are hardcoded package
   vars rather than `flag`-parsed -- the one place the port is actually
   more rigid than the Ruby version, since `scandalous/config/puma.rb`'s
-  bind address is editable without a rebuild. Smaller ones: `sort.Slice`
+  bind address is editable without a rebuild. (`listenAddr` (web)
+  partially addressed this on the `nginx-reverse-proxy` branch -- see
+  above -- via a single `LAMBADA_WEB_LISTEN_ADDR` env override, not a
+  general flags system. `scanDir` (web) and all three `mta` vars are
+  still hardcoded.) Smaller ones: `sort.Slice`
   in `listing()` could be `slices.SortFunc` now that `go.mod` declares
   `go 1.26.3`, and `filepath.Glob`'s error in `listing()` could be
   wrapped with `%w` plus the directory path for a more useful log line.

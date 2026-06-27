@@ -20,10 +20,28 @@ import (
 	"github.com/justincampbell/timeago"
 )
 
+// listenAddr defaults to loopback-only, on the assumption that nginx
+// (service/lambada-web.nginx.conf) is the only thing listening on a
+// LAN-facing port (80), proxying to here over a stable local connection --
+// see docs/COWORK.md for why (the suspected culprit behind an intermittent
+// zouk connect hang, issue #5). Set LAMBADA_WEB_LISTEN_ADDR to override
+// this without a rebuild, e.g. back to the old "0.0.0.0:8080 behind an
+// iptables redirect" setup if nginx ends up being more trouble than it's
+// worth -- see docs/DEVELOPMENT.md for the exact rollback steps.
 var (
 	scanDir    = "./attachments"
-	listenAddr = "0.0.0.0:8080"
+	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "127.0.0.1:8080")
 )
+
+// envOr returns the value of the named environment variable, or fallback
+// if it's unset or empty. The one and only knob lambada-web exposes outside
+// of editing main.go directly -- see the var block above.
+func envOr(name, fallback string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return fallback
+}
 
 //go:embed templates/listing.html.tmpl
 var templatesFS embed.FS

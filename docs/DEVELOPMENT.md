@@ -32,13 +32,17 @@ go mod tidy
 go build -o lambada-mta ./cmd/lambada-mta
 ./lambada-mta
 
-# Build and run lambada-web (listens on 0.0.0.0:8080), in another shell
+# Build and run lambada-web (listens on 127.0.0.1:8080 by default), in
+# another shell
 go build -o lambada-web ./cmd/lambada-web
 ./lambada-web
 ```
 
 Both default to `./attachments` (created automatically) and expect to be
-run from the repo root.
+run from the repo root. `127.0.0.1:8080` is fine for local testing with
+plain `curl`/a browser on the same machine -- see "Reverse proxy (nginx)"
+below for the on-Pi setup, and the `LAMBADA_WEB_LISTEN_ADDR` override if you
+want lambada-web reachable from other machines without nginx in front.
 
 ## Configuration
 
@@ -49,11 +53,15 @@ run from the repo root.
 | `maxFileAge`       | lambada-mta  | `24h`           | How long to retain attachments                |
 | `MaxMessageBytes`  | lambada-mta  | `25 MB`         | Maximum accepted message size                 |
 | `scanDir`          | lambada-web  | `./attachments` | Where scans are read from                     |
-| `listenAddr`       | lambada-web  | `0.0.0.0:8080`  | TCP address to listen on                      |
+| `listenAddr`       | lambada-web  | `127.0.0.1:8080`| TCP address to listen on (see below)          |
 
 The settings above are package-level `var`s, not flags or env vars
 (matching the original Ruby `mta.rb`/`web.rb`, which hardcoded ports too)
--- edit `cmd/<binary>/main.go` directly if you need to change them.
+-- edit `cmd/<binary>/main.go` directly if you need to change them. The one
+exception is `lambada-web`'s `listenAddr`, which can be overridden without a
+rebuild by setting `LAMBADA_WEB_LISTEN_ADDR` -- added specifically so the
+nginx-vs-direct choice below is a one-line, no-rebuild switch rather than a
+code edit.
 
 ## Running Tests
 
@@ -129,7 +137,7 @@ Example output:
 2026/05/27 00:37:53 Receiving message
 2026/05/27 00:37:56 Write 268809 bytes to attachments/1779867473.pdf
 2026/05/27 00:37:56 Saved attachment: attachments/1779867473.pdf
-2026/05/27 00:38:02 lambada-web listening on 0.0.0.0:8080, serving ./attachments
+2026/05/27 00:38:02 lambada-web listening on 127.0.0.1:8080, serving ./attachments
 ```
 
 ## systemd Services
@@ -171,20 +179,24 @@ sudo ss -tanp | grep lambada-web   # -a is required -- without it ss only shows
                                     # CLOSE-WAIT/FIN-WAIT ones a leak actually piles up in
 ```
 
-Port 25 is redirected to 2525, and port 80 to 8080, via iptables so both
-services can run as a non-root user:
+Port 25 is redirected to 2525 via iptables so `lambada-mta` can run as a
+non-root user:
 
 ```bash
 sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
-sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 ```
+
+`lambada-web` doesn't need a redirect -- it listens on `127.0.0.1:8080` by
+default, and nginx (next section) is what binds port 80. The port 80
+redirect below only comes back into play if you roll nginx back out; see
+"Rolling back to the iptables redirect."
 
 ### Verifying or resetting the iptables redirect
 
-The commands above add to `PREROUTING` -- they don't replace what's
+The command above adds to `PREROUTING` -- it doesn't replace what's
 already there, and nothing persists the result across a reboot (no
 `iptables-persistent`/`netfilter-persistent` installed by default). Re-run
-them after every setup attempt or reboot and you'll eventually end up with
+it after every setup attempt or reboot and you'll eventually end up with
 duplicate/conflicting rules -- a "hot mess," per
 [issue #1](https://github.com/woodie/lambada/issues/1).
 
@@ -194,13 +206,14 @@ Check what's actually there:
 sudo iptables -t nat -L PREROUTING -n -v
 ```
 
-Correct output has exactly one `REDIRECT` line per port:
+Correct output has exactly one `REDIRECT` line for port 25 (an extra line
+for `dpt:80 redir ports 8080` is expected only if you've rolled back to the
+pre-nginx setup below):
 
 ```
 Chain PREROUTING (policy ACCEPT 123K packets, 25M bytes)
  pkts bytes target     prot opt in     out     source        destination
     1    64 REDIRECT   6    --  *      *       0.0.0.0/0     0.0.0.0/0      tcp dpt:25 redir ports 2525
-   33  2112 REDIRECT   6    --  *      *       0.0.0.0/0     0.0.0.0/0      tcp dpt:80 redir ports 8080
 ```
 
 If it looks like a mess (duplicates, wrong ports, leftover rules from
@@ -209,6 +222,57 @@ testing), wipe `PREROUTING` and reapply cleanly:
 ```bash
 sudo iptables -t nat -F PREROUTING
 sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
-sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 sudo netfilter-persistent save   # if installed -- otherwise this resets on reboot anyway
+```
+
+## Reverse proxy (nginx)
+
+`lambada-web` defaults to listening on `127.0.0.1:8080` only, on the
+assumption that nginx is the thing actually facing the LAN on port 80,
+proxying to it over a stable local connection (`service/lambada-web.nginx.conf`).
+The motivation is tracked in
+[issue #5](https://github.com/woodie/lambada/issues/5) (an intermittent
+zouk connect hang) and
+[issue #6](https://github.com/woodie/lambada/issues/6) (the "try nginx"
+proposal) -- worth reading both before deciding whether this is worth it
+for your setup; the honest caveat from #6 is that this insulates against
+the suspected cause rather than confirming it.
+
+Install:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nginx
+sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
+sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Verify nginx is proxying correctly (both should return the listing page):
+
+```bash
+curl -I http://localhost/            # via nginx, port 80
+curl -I http://127.0.0.1:8080/       # lambada-web directly, bypassing nginx
+```
+
+### Rolling back to the iptables redirect
+
+If nginx ends up being more trouble than it's worth, rolling back doesn't
+require a rebuild -- `LAMBADA_WEB_LISTEN_ADDR` exists for exactly this:
+
+```bash
+# Stop nginx from claiming port 80
+sudo systemctl disable --now nginx
+
+# Tell lambada-web to bind 0.0.0.0:8080 directly again. Add this as a
+# systemd override rather than editing the unit file in place, so it
+# survives a `git pull` + re-copy of service/lambada-web.service:
+sudo systemctl edit lambada-web
+#   [Service]
+#   Environment=LAMBADA_WEB_LISTEN_ADDR=0.0.0.0:8080
+sudo systemctl restart lambada-web
+
+# Reapply the old port 80 redirect
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 ```
