@@ -9,7 +9,9 @@ Two minimal Go services for a scanner/printer that requires an open relay to
 e-mail out scans. Run them on a **Raspberry Pi** to receive scans by e-mail
 and browse or download them from your home network.
 
-<img width="697" height="358" alt="flow" src="https://github.com/user-attachments/assets/3844ed47-9741-4017-afd2-7c778b765d1a" />
+<img width="193" height="226" alt="printer" src="https://github.com/user-attachments/assets/a1d7f795-6e4b-43ca-91a9-1d915b28fedc" />
+<img width="161" height="117" alt="piv1" src="https://github.com/user-attachments/assets/d4d1104a-7512-4310-a699-df8a36704b9b" /> &nbsp;
+<img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
 
 A lot of perfectly good scanners and printers end up in a landfill the
 day their cloud-email feature stops working -- usually because the auth
