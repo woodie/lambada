@@ -10,11 +10,10 @@
     <p>No files found in the directory.</p>
   {{else}}
     <ul>
-      {{$now := .Now}}
       {{range .Scans}}
         <li>
           <a href="/download/{{.Name}}">&#128196; {{humanSize .Size}}</a>
-          <span>{{timeAgo .Time $now}} ago</span>
+          <span>{{timeAgo .Time timeNow}} ago</span>
         </li>
       {{end}}
     </ul>

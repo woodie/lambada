@@ -149,16 +149,16 @@ var listingTemplate = template.Must(
 		Funcs(template.FuncMap{
 			"humanSize": func(size int64) string { return humanize.Bytes(uint64(size)) },
 			"timeAgo":   func(t, now time.Time) string { return timeago.FromDuration(now.Sub(t).Abs()) },
+			"timeNow":   time.Now,
 		}).
 		ParseFS(templatesFS, "templates/listing.html.tmpl"),
 )
 
-// listingData is what listing.html.tmpl renders: the raw scan listing plus
-// the request time, since the template needs both to compute each scan's
-// age via the timeAgo func.
+// listingData is what listing.html.tmpl renders: just the raw scan
+// listing -- the template fetches the current time itself via timeNow to
+// compute each scan's age via timeAgo.
 type listingData struct {
 	Scans []scan
-	Now   time.Time
 }
 
 // handleIndex is registered under the "GET /{$}" pattern, which (unlike a
@@ -173,7 +173,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	data := listingData{Scans: scans, Now: time.Now()}
+	data := listingData{Scans: scans}
 	if err := listingTemplate.Execute(w, data); err != nil {
 		log.Printf("template error: %v", err)
 	}
