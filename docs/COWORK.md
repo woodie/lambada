@@ -195,6 +195,18 @@ shouldn't need a comment defending the choice.
    template as `{{$now := .Now}}`) instead of calling `time.Now()`
    internally, to keep age calculations dependency-injectable and
    testable.
+4. Undid that one deviation. `timeNow` (`time.Now` directly) is now a
+   `listingTemplate` FuncMap entry, and the template calls
+   `{{timeAgo .Time timeNow}}` -- matching `listing.erb`'s
+   `time_ago_in_words` exactly, which reaches for `Time.now` implicitly
+   rather than taking it as an argument. `listingData` drops its `Now`
+   field. The dependency-injectable property step 3 called out as
+   deliberate was never actually exercised: the one render test asserts
+   a loose "less than a minute ago" substring, robust to whatever clock
+   reaches the template, real or fixed. A future test wanting an exact
+   age string would need `handleIndex` to accept an injected
+   template/clock regardless of how `timeNow`'s value arrives, so the
+   `.Now` plumbing wasn't earning its keep. Commit `cccb5b1`.
 
 ## Next up
 
@@ -209,3 +221,18 @@ shouldn't need a comment defending the choice.
   graceful `Shutdown()` instead of letting systemd hard-kill it on
   `restart`/`stop` -- not done this session, flagged in case a restart
   ever drops an in-flight download.
+- A "what's not conventional Go here" pass turned up a few small,
+  unacted-on items: `scanDir`/`listenAddr` (web) and
+  `attachmentDir`/`listenAddr`/`maxFileAge` (mta) are hardcoded package
+  vars rather than `flag`-parsed -- the one place the port is actually
+  more rigid than the Ruby version, since `scandalous/config/puma.rb`'s
+  bind address is editable without a rebuild. Smaller ones: `sort.Slice`
+  in `listing()` could be `slices.SortFunc` now that `go.mod` declares
+  `go 1.26.3`, and `filepath.Glob`'s error in `listing()` could be
+  wrapped with `%w` plus the directory path for a more useful log line.
+  None of this blocks anything.
+- Ginkgo/Gomega (RSpec-style `Describe`/`Context`/`It`) is the one
+  clearly non-default-for-Go choice in the test suite, picked
+  deliberately so `main_test.go` mirrors `scan_files_spec.rb`/
+  `web_spec.rb`'s structure one-for-one -- flagged here for visibility,
+  not because it needs reconsidering.
