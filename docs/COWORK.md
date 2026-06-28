@@ -90,37 +90,40 @@ on the Pi in production, and both addressed this session:
   and woodie ended up living with the `setsid nohup ... & disown`
   workaround rather than getting a real fix (or giving up on lambada-web
   and going back to scandalous-web, which it wasn't quite bad enough to
-  justify). Two symptoms reported together under one title, root-caused
-  separately this session:
+  justify). Two symptoms reported together under one title, diagnosed
+  separately this session -- with very different confidence levels:
   1. `sudo systemctl status lambada-mta lambada-web` hung the shell,
      needing Ctrl-C. That's just `less` paging interactively over SSH,
-     not an app bug. Fixed by adding `--no-pager` to the status commands
-     in `README.md`/`docs/DEVELOPMENT.md`.
+     not an app bug -- confirmed, not a theory. Fixed by adding
+     `--no-pager` to the status commands in `README.md`/`docs/DEVELOPMENT.md`.
   2. The actual "properly background" complaint, clarified by woodie as:
      the client can't connect, like the server doesn't close connections
-     properly. Root cause: `cmd/lambada-web/main.go`'s `main()` called
-     bare `http.ListenAndServe(listenAddr, newMux())`, which builds a
+     properly. What's verifiably true about the code, just from reading
+     it: `cmd/lambada-web/main.go`'s `main()` called bare
+     `http.ListenAndServe(listenAddr, newMux())`, which builds a
      zero-value `http.Server` -- every one of `ReadTimeout`,
      `ReadHeaderTimeout`, `WriteTimeout`, and `IdleTimeout` defaults to 0,
-     i.e. "wait forever." A client that opens a keep-alive connection and
-     goes quiet (a laptop sleeping mid-request, a flaky Wi-Fi hop, zouk
-     reconnecting without cleanly closing the old socket) ties up a
-     goroutine and a file descriptor on the Pi forever. `Restart=always`
-     in `lambada-web.service` never fires to clear this because the
-     process never actually crashes -- it just silently accumulates
-     leaked connections for as long as it's been running, until new
-     clients can't get in at all, even though systemd reports it "active"
-     the entire time. Manually killing it and re-backgrounding with
-     `setsid nohup ./lambada-web ... & disown` "fixed" it only because
-     that reset the leak count to zero -- not because manual
-     backgrounding is mechanically different from systemd's
-     `Type=simple`; it isn't. This is the class of bug the Ruby/Puma
-     predecessor (`~/workspace/scandalous`) never hit: Puma sets sane
-     connection timeouts itself, bare `net/http.ListenAndServe` doesn't.
-     Fixed by extracting `newServer(addr, handler) *http.Server` in
-     `cmd/lambada-web/main.go` with explicit timeouts, with a regression
-     test in `main_test.go` asserting every timeout is nonzero so a
-     future edit can't silently revert to the zero-value server.
+     i.e. "wait forever." From there it's a theory, not a confirmed root
+     cause: a client that opens a keep-alive connection and goes quiet (a
+     laptop sleeping mid-request, a flaky Wi-Fi hop, zouk reconnecting
+     without cleanly closing the old socket) *could* tie up a goroutine
+     and a file descriptor on the Pi indefinitely, which *would* explain
+     why `Restart=always` in `lambada-web.service` never fired (the
+     process never actually crashes) and why manually killing and
+     re-backgrounding with `setsid nohup ./lambada-web ... & disown`
+     seemed to "fix" it. Nobody ever pulled an actual `/proc/<pid>/fd`
+     count from the Pi while the symptom was happening, though, and a
+     later investigation into a related-looking hang ([issue #5]
+     (https://github.com/woodie/lambada/issues/5), below) found fd counts
+     at rest were normal and couldn't reproduce a leak -- so treat this as
+     the leading explanation, not settled fact. Either way, a zero-timeout
+     `http.Server` is bad practice on its own merits regardless of whether
+     it explains this specific incident, and that's the part actually
+     fixed: extracted `newServer(addr, handler) *http.Server` (originally
+     in `cmd/lambada-web/main.go`, now its own `server.go`) with explicit
+     timeouts, with a regression test (`server_test.go`) asserting every
+     timeout is nonzero so a future edit can't silently revert to the
+     zero-value server.
   - Alongside #2's fix, also simplified both `service/*.service` files'
     `ExecStart` from `/usr/bin/env ./<binary>` to the binary's absolute
     path -- one less moving part in the supervision chain, matching how
@@ -144,22 +147,28 @@ through this session. Two things it caught, both fixed:
   distinction was caught -- reverted. If you're deploying on a Pi where
   the user isn't `pi`, edit your local copy of the service file after
   `cp`-ing it to `/etc/systemd/system/`, and don't commit that edit back.
-- **The timeline confirms the leak theory and explains the asymmetry.**
-  systemd started `lambada-web.service` at 03:55:24, logged it listening
-  fine, then woodie stopped it by hand at 04:28:53 -- just 33 minutes
-  later -- and switched to the manual `setsid nohup ... & disown`
+- **The timeline is consistent with the leak theory, though it doesn't
+  confirm it.** systemd started `lambada-web.service` at 03:55:24, logged
+  it listening fine, then woodie stopped it by hand at 04:28:53 -- just 33
+  minutes later -- and switched to the manual `setsid nohup ... & disown`
   workaround at 04:53, which was still running fine ~10 hours later when
-  the output was pasted. Same binary, same leak, wildly different time to
-  failure: that gap is consistent with systemd's per-service file
-  descriptor ceiling (`LimitNOFILE`) being much lower than whatever an
-  interactive login shell hands a manually-backgrounded process, so the
-  exact same zero-timeout leak burns through systemd's tighter ceiling
-  fast and the shell's looser one slowly. Fixed: both `service/*.service`
-  files now set `LimitNOFILE=65536` as a backstop alongside the real fix
-  (`newServer()`'s timeouts). See the "Verifying or resetting the
+  the output was pasted. Same binary, two very different times to
+  failure: *if* the zero-timeout theory is right, that gap fits systemd's
+  per-service file descriptor ceiling (`LimitNOFILE`) being much lower
+  than whatever an interactive login shell hands a manually-backgrounded
+  process -- the same leak would burn through systemd's tighter ceiling
+  fast and the shell's looser one slowly. But it's equally consistent
+  with a one-off network blip, something specific to that boot, or plain
+  bad luck, and issue #5's later investigation into a similar-looking
+  hang found fd counts normal at rest and couldn't pin down a leak either
+  -- so treat this as corroborating, not conclusive. Fixed regardless:
+  both `service/*.service` files now set `LimitNOFILE=65536` as a
+  backstop alongside the timeout fix (`newServer()` in
+  `cmd/lambada-web/server.go`). See the "Verifying or resetting the
   iptables redirect"-adjacent note in `docs/DEVELOPMENT.md` for the
-  `/proc/<pid>/fd` count check that would confirm this empirically on the
-  live box -- not yet run, since this session has no shell on `rackspace`.
+  `/proc/<pid>/fd` count check that would actually confirm or rule this
+  out on the live box -- not yet run, since this session has no shell on
+  `rackspace`.
 - `lambada-mta.service` was unaffected throughout (enabled, active, PID
   matched `ps aux`) -- the asymmetry is specific to `lambada-web`'s HTTP
   keep-alive handling, not a systemd-wide problem.
@@ -208,6 +217,82 @@ shouldn't need a comment defending the choice.
    template/clock regardless of how `timeNow`'s value arrives, so the
    `.Now` plumbing wasn't earning its keep. Commit `cccb5b1`.
 
+## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
+
+Two new issues, filed this session, prompted by woodie noticing zouk's
+launch sometimes hangs on the running-dog screen until an unrelated
+browser `GET /` unsticks it -- not reproducible with the old Ruby/Puma
+`scandalous-web`:
+
+- **[#5](https://github.com/woodie/lambada/issues/5)** -- the bug report
+  itself, with a repro procedure for next time (watch `/proc/<pid>/fd`
+  live, trigger the hang, hit `GET /` from a browser, see whether the fd
+  count moves before or after). Investigated this session: fd count at
+  rest was a normal 8-9 (not a leak), the single iptables redirect rule
+  per port was clean (not issue #1 recurring), no shared lock between
+  `handleIndex`/`handleScansJSON`. Root cause **not confirmed** -- the bug
+  stopped reproducing mid-session before the live capture could happen.
+- **[#6](https://github.com/woodie/lambada/issues/6)** -- woodie's own
+  "try nginx in front of lambada" proposal, written up after talking
+  through whether a "smart person" suggesting nginx for X/Y/Z reasons
+  actually holds up for a homelab system handling a couple of connections
+  a week. It does, for two reasons that don't depend on
+  scaling/TLS/rate-limiting theater: nginx terminates the client
+  connection with its own decades-tuned timeout/keep-alive handling
+  before lambada-web ever sees it, and it lets the iptables port 80->8080
+  `PREROUTING` redirect (already flagged as fragile in issue #1) go away
+  entirely. The honest caveat, also from #6: this insulates against the
+  suspected cause of #5 rather than confirming what it actually was.
+
+Decided to try it anyway, with two safety nets woodie asked for
+explicitly:
+
+1. **A no-rebuild switch, not a hardcoded address.** `lambada-web`'s
+   `listenAddr` still defaults to `0.0.0.0:8080` -- the same direct-expose
+   setup it's always had, so a fresh clone works whether or not nginx is
+   installed. `LAMBADA_WEB_LISTEN_ADDR` is the opt-*in*: set it to
+   `127.0.0.1:8080` via a `systemctl edit lambada-web` override once nginx
+   is actually fronting it, switching lambada-web to loopback-only without
+   touching code or rebuilding. (Originally shipped the other way around --
+   defaulting to `127.0.0.1:8080` with the env var as the opt-*out* back to
+   direct -- but woodie wanted the no-nginx case to keep working out of the
+   box rather than silently going unreachable for anyone who skips the
+   nginx section, so the default/override roles got swapped before this PR
+   merged.) The narrower fix would have been to just hardcode whichever
+   address and call the iptables line dead; woodie wanted rollback to not
+   require a rebuild either direction, so this is the one deliberate
+   exception to "no flags or env vars" in `docs/DEVELOPMENT.md`'s
+   Configuration section.
+2. **A feature branch, not straight to `main`.** All of this -- the
+   `main.go` change, the new `service/lambada-web.nginx.conf`, and the
+   README.md/DEVELOPMENT.md doc updates -- is on `nginx-reverse-proxy`,
+   not `main`, specifically so it can be tried on the Pi and abandoned
+   without a revert if it doesn't earn its keep.
+
+`docs/DEVELOPMENT.md` gained a "Reverse proxy (nginx)" section (install +
+verify) and a "Rolling back to the iptables redirect" subsection under it;
+the old "port 25 and 80 redirected via iptables" text is now port-25-only,
+since lambada-web no longer needs a redirect by default.
+
+### A `.git` gotcha hit while doing this
+
+Running `git checkout -b` from the Cowork sandbox's bash mount against
+this same working copy raced with something else touching `.git` at the
+same time (most likely woodie's own Terminal on the actual Mac, since the
+folder is a live two-way mount, not a copy) and left `.git/index.lock`,
+`.git/packed-refs.lock.{x,x2,stale.<ts>}`, and
+`.git/refs/tags/0.3.0.lock.{x,x2,stale.<ts>}` behind -- conflict-renamed
+copies of git's own lockfiles, not names git itself would ever create.
+The `refs/tags/0.3.0.lock.*` ones are the nastier kind: anything that
+walks `refs/tags/*` (`git fsck`, `git tag`, `git push --tags`) tries to
+parse them as refs and fails with `invalid sha1 pointer`. None of it
+touched real history -- `main` and `nginx-reverse-proxy` both still point
+at `7f71178` -- but the sandbox couldn't delete the stray files itself
+(`Operation not permitted` on every one), so woodie cleaned them up by
+hand on the Mac. **Takeaway for next time:** don't run git commands from
+both sides (sandbox bash and a local Terminal) against the same mounted
+repo at once.
+
 ## Next up
 
 - Confirm on real hardware: `go build ./...`, `go test ./...` (or
@@ -226,7 +311,11 @@ shouldn't need a comment defending the choice.
   `attachmentDir`/`listenAddr`/`maxFileAge` (mta) are hardcoded package
   vars rather than `flag`-parsed -- the one place the port is actually
   more rigid than the Ruby version, since `scandalous/config/puma.rb`'s
-  bind address is editable without a rebuild. Smaller ones: `sort.Slice`
+  bind address is editable without a rebuild. (`listenAddr` (web)
+  partially addressed this on the `nginx-reverse-proxy` branch -- see
+  above -- via a single `LAMBADA_WEB_LISTEN_ADDR` env override, not a
+  general flags system. `scanDir` (web) and all three `mta` vars are
+  still hardcoded.) Smaller ones: `sort.Slice`
   in `listing()` could be `slices.SortFunc` now that `go.mod` declares
   `go 1.26.3`, and `filepath.Glob`'s error in `listing()` could be
   wrapped with `%w` plus the directory path for a more useful log line.
