@@ -8,9 +8,7 @@ User=pi
 WorkingDirectory=/home/pi/workspace/lambada
 ExecStart=/home/pi/workspace/lambada/lambada-mta
 Restart=always
-# Matching lambada-web.service's LimitNOFILE -- mta hasn't shown the same
-# symptom, but there's no reason to leave it on a stingier default fd
-# ceiling than its sibling service.
+# Matching lambada-web.service's LimitNOFILE for consistency.
 LimitNOFILE=65536
 
 [Install]

@@ -21,14 +21,9 @@ import (
 	"github.com/justincampbell/timeago"
 )
 
-// listenAddr defaults to 0.0.0.0:8080, the same direct-expose setup
-// lambada-web has always used -- nginx (service/lambada-web.nginx.conf)
-// is optional, not assumed. Set LAMBADA_WEB_LISTEN_ADDR=127.0.0.1:8080
-// without a rebuild to switch to loopback-only once nginx is actually the
-// thing facing the LAN on port 80, proxying to here over a stable local
-// connection -- see docs/COWORK.md for the motivation (the suspected
-// culprit behind an intermittent zouk connect hang, issue #5) and
-// docs/DEVELOPMENT.md's "Reverse proxy (nginx)" section for setup/rollback.
+// listenAddr defaults to 0.0.0.0:8080 -- reachable on the LAN with or
+// without nginx in front. Override LAMBADA_WEB_LISTEN_ADDR=127.0.0.1:8080
+// once nginx is fronting it; see docs/DEVELOPMENT.md "Reverse proxy (nginx)".
 var (
 	scanDir    = "./attachments"
 	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")

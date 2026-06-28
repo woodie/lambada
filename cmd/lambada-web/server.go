@@ -7,18 +7,9 @@ import (
 	"time"
 )
 
-// Connection timeouts for the http.Server lambada-web runs. The bare
-// http.ListenAndServe(addr, handler) helper used previously builds a
-// zero-value http.Server, and every one of ReadTimeout, ReadHeaderTimeout,
-// WriteTimeout, and IdleTimeout defaults to 0 there -- i.e. "wait forever."
-// A client that opens a keep-alive connection and then goes quiet (a
-// laptop sleeping mid-request, a flaky Wi-Fi hop, zouk reconnecting
-// without cleanly closing the old socket) would tie up a goroutine and a
-// file descriptor on the Pi for as long as the process has been running.
-// This is the suspected -- not confirmed, see docs/COWORK.md -- cause
-// behind https://github.com/woodie/lambada/issues/2, and these timeouts
-// are the fix either way: a server that actually times out idle
-// connections can't leak them indefinitely.
+// Timeouts for the http.Server lambada-web runs. A bare http.ListenAndServe
+// defaults all four to 0 ("wait forever") -- the suspected, unconfirmed
+// cause of issue #2. See docs/COWORK.md.
 const (
 	readHeaderTimeout = 5 * time.Second
 	readTimeout       = 10 * time.Second

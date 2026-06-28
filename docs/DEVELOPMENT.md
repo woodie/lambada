@@ -163,6 +163,18 @@ sudo systemctl status lambada-mta lambada-web --no-pager
 that's easy to mistake for a hung shell -- `--no-pager` (above) avoids it;
 if you forget, `q` exits the pager (not Ctrl-C).
 
+If you have issues with the server holding onto your terminal, try
+disabling the pager for good instead of typing `--no-pager` every time:
+
+```bash
+# Per-user, interactive SSH logins only -- add to ~/.bashrc
+echo 'export SYSTEMD_PAGER=cat' >> ~/.bashrc
+
+# System-wide, any login (SSH, console, etc.) -- /etc/environment uses
+# plain KEY=value, no `export`
+echo 'SYSTEMD_PAGER=cat' | sudo tee -a /etc/environment
+```
+
 Both unit files set `LimitNOFILE=65536`, well above systemd's stingier
 per-service default. This is a backstop, not a confirmed fix for anything
 specific -- the actual fix for
