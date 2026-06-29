@@ -45,8 +45,6 @@ client, or just a plain web browser pointed at the Pi (browsers flag
 the download as unsafe over plain HTTP, so expect an extra "Keep"
 click to confirm it anyway).
 
-<img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
-
 ## Installation
 
 Make sure you have `git` and `go` installed on the Pi, then...
