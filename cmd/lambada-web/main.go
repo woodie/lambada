@@ -141,7 +141,7 @@ func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", handleIndex)
 	mux.HandleFunc("GET /style.css", handleStyle)
-	mux.HandleFunc("GET /scans.json", handleScansJSON)
+	mux.HandleFunc("GET /files.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
 	return mux
 }

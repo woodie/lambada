@@ -8,7 +8,7 @@ Lambada is two minimal Go services for a scanner/printer that requires an open r
 
 'lambada-mta' is a minimal SMTP server. The scanner emails scans to the Pi over SMTP; lambada-mta receives the message, decodes the attachment, and saves it with an epoch-based filename (e.g. 1779867473.pdf) to attachments/. Files older than 24 hours are cleaned up on each incoming message.
 
-'lambada-web' serves a listing of those files over HTTP: a page with download links, human-readable file sizes, and "time ago" timestamps, plus a GET /scans.json API used by the zouk Mac client. This is a Go port of the scandalous project's Sinatra web server.
+'lambada-web' serves a listing of those files over HTTP: a page with download links, human-readable file sizes, and "time ago" timestamps, plus a GET /files.json API used by the zouk Mac client. This is a Go port of the scandalous project's Sinatra web server.
 
 Read `README.md` first for the user-facing description and API
 contract. This doc is about *how the project got here* and *how to keep
@@ -292,6 +292,36 @@ at `7f71178` -- but the sandbox couldn't delete the stray files itself
 hand on the Mac. **Takeaway for next time:** don't run git commands from
 both sides (sandbox bash and a local Terminal) against the same mounted
 repo at once.
+
+## This session: `/files.json` + `url`→`path` field rename (breaking API change)
+
+woodie noticed the JSON field was never a URL -- `/download/<name>` is a
+server-relative path, not a URL -- and decided to fix the misnomer now
+rather than carry it forward, plus rename the endpoint itself from
+`/scans.json` to `/files.json` (the API just shares files; "scans" was an
+unnecessary narrowing, and woodie wants room to expand the API later).
+`scandalous` started this rename first (the original, hand-written-in-a-
+few-minutes Ruby implementation), with the `url`→`path` field rename
+already landed there as an uncommitted local change before this session;
+this session's job was the endpoint rename in `scandalous` plus mirroring
+both renames into `lambada-web` to keep the two backends in sync, since
+`zouk` is meant to talk to either one. Deliberately untouched: every
+method/function name (`scans_json`, `handleScansJSON`, `toScansJSON`,
+`fetchScans()` on the zouk side) -- only the wire shape (route path, JSON
+key) changed, not the code's internal vocabulary for it.
+
+Changed here: `main.go`'s route registration (`GET /files.json`, still
+calling `handleScansJSON` -- name intentionally not changed), `scanfiles.go`'s
+`scanJSON.URL`/`json:"url"` field renamed to `Path`/`json:"path"`, and the
+corresponding test/doc/README references. Made by inspection only per the
+sandbox limitation above -- **not yet confirmed with `go build ./...` /
+`go test ./...` (or `ginkgo -r -v`) on a real machine.** `lambada-web` and
+`zouk` have to land their halves of this together (or with `zouk` left
+backward-compatible) since an old `zouk` build pointed at a freshly
+rebuilt `lambada-web` would 404 on `/scans.json` and fail to decode a
+listing missing the `url` key it expects -- there's no in-between state
+where both old and new clients/servers interoperate. See zouk's own
+`docs/COWORK.md` for that side of the same change.
 
 ## Next up
 

@@ -84,10 +84,10 @@ var _ = Describe("Lambada WEB", func() {
 		})
 	})
 
-	Describe("GET /scans.json", func() {
+	Describe("GET /files.json", func() {
 		Context("with no files", func() {
 			It("returns an empty array", func() {
-				rec := get(mux, "/scans.json")
+				rec := get(mux, "/files.json")
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Header().Get("Content-Type")).To(Equal("application/json"))
 
@@ -97,14 +97,14 @@ var _ = Describe("Lambada WEB", func() {
 			})
 		})
 
-		// The exact JSON shape (name/size/time/url) is unit-tested directly
+		// The exact JSON shape (name/size/time/path) is unit-tested directly
 		// against toScansJSON in scanfiles_test.go -- this just checks the
 		// route is wired up to it.
 		Context("with a file", func() {
 			BeforeEach(writeFile)
 
 			It("returns one entry", func() {
-				rec := get(mux, "/scans.json")
+				rec := get(mux, "/files.json")
 				Expect(rec.Code).To(Equal(http.StatusOK))
 
 				var entries []map[string]any

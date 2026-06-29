@@ -131,7 +131,7 @@ curl smtp://localhost:2525 \
 
 ```bash
 curl http://localhost:8080/
-curl http://localhost:8080/scans.json
+curl http://localhost:8080/files.json
 curl -OJ http://localhost:8080/download/1234567890.pdf
 ```
 

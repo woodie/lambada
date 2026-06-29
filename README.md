@@ -34,7 +34,7 @@ This repo builds two independent binaries that share the same
   cleaned up on each incoming message.
 - **`lambada-web`** -- serves a listing of those files over HTTP: a page
   with download links, human-readable file sizes, and "time ago"
-  timestamps, plus a `GET /scans.json` API used by the
+  timestamps, plus a `GET /files.json` API used by the
   [zouk](https://github.com/woodie/zouk) Mac client. This is a Go port of
   the [scandalous](https://github.com/woodie/scandalous) project's Sinatra
   web server.

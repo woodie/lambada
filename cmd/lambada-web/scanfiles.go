@@ -48,13 +48,16 @@ func listing(dir string) ([]scan, error) {
 	return scans, nil
 }
 
-// scanJSON is the shape served at /scans.json (and consumed by the zouk
-// Mac client).
+// scanJSON is the shape served at /files.json (and consumed by the zouk
+// Mac client). Path is a server-relative download path, not a URL --
+// previously misnamed "url" in this field and in scandalous's matching
+// Ruby shape; both were renamed together as part of the /files.json
+// rename so the field name actually describes what it holds.
 type scanJSON struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Time string `json:"time"`
-	URL  string `json:"url"`
+	Path string `json:"path"`
 }
 
 // toScansJSON converts a raw scan listing into its API shape -- pulled out
@@ -67,7 +70,7 @@ func toScansJSON(scans []scan) []scanJSON {
 			Name: s.Name,
 			Size: s.Size,
 			Time: s.Time.Format(time.RFC3339),
-			URL:  "/download/" + s.Name,
+			Path: "/download/" + s.Name,
 		})
 	}
 	return out

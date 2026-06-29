@@ -64,7 +64,7 @@ var _ = Describe("ScanFiles", func() {
 					Name: "1234567890.pdf",
 					Size: 7,
 					Time: when.Format(time.RFC3339),
-					URL:  "/download/1234567890.pdf",
+					Path: "/download/1234567890.pdf",
 				},
 			}))
 		})
