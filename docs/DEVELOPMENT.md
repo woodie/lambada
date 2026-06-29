@@ -51,14 +51,14 @@ fronting it.
 
 ## Configuration
 
-| Variable          | Binary        | Default         | Description                                  |
-|--------------------|--------------|-----------------|-----------------------------------------------|
-| `attachmentDir`    | lambada-mta  | `./attachments` | Where attachments are written. Override: `LAMBADA_ATTACHMENTS_DIR` |
-| `listenAddr`       | lambada-mta  | `0.0.0.0:2525`  | TCP address to listen on                      |
-| `maxFileAge`       | lambada-mta  | `24h`           | How long to retain attachments                |
-| `MaxMessageBytes`  | lambada-mta  | `25 MB`         | Maximum accepted message size                 |
-| `scanDir`          | lambada-web  | `./attachments` | Where scans are read from. Override: `LAMBADA_ATTACHMENTS_DIR` |
-| `listenAddr`       | lambada-web  | `0.0.0.0:8080`  | TCP address to listen on (see below)          |
+| Variable          | Binary        | Default         | Description                             |
+|--------------------|--------------|-----------------|-----------------------------------------|
+| `attachmentDir`    | lambada-mta  | `./attachments` | Override with `LAMBADA_ATTACHMENTS_DIR` |
+| `listenAddr`       | lambada-mta  | `0.0.0.0:2525`  | TCP address to listen on                |
+| `maxFileAge`       | lambada-mta  | `24h`           | How long to retain attachments          |
+| `MaxMessageBytes`  | lambada-mta  | `25 MB`         | Maximum accepted message size           |
+| `scanDir`          | lambada-web  | `./attachments` | Override with `LAMBADA_ATTACHMENTS_DIR` |
+| `listenAddr`       | lambada-web  | `0.0.0.0:8080`  | TCP address to listen on (see below)    |
 
 The settings above are package-level `var`s, not flags or env vars
 (matching the original Ruby `mta.rb`/`web.rb`, which hardcoded ports too)
@@ -81,12 +81,14 @@ configurability:
 ```bash
 # Install the Ginkgo CLI (first time only)
 go install github.com/onsi/ginkgo/v2/ginkgo@latest
+go install github.com/woodie/ginkgo-fd@latest
 
 # Make sure ~/go/bin is on your PATH
 export PATH="$PATH:$(go env GOPATH)/bin"
 
 # Run every suite
 ginkgo -r -v
+ginkgo-fd -r
 
 # Or just one binary's suite
 ginkgo -v ./cmd/lambada-mta
