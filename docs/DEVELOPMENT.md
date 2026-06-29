@@ -163,6 +163,11 @@ sudo systemctl status lambada-mta lambada-web --no-pager
 that's easy to mistake for a hung shell -- `--no-pager` (above) avoids it;
 if you forget, `q` exits the pager (not Ctrl-C).
 
+`systemd(1)` documents `SYSTEMD_PAGER=cat` (e.g. in `~/.bashrc`) as a way to
+disable the pager for good. In testing on this project's own Pi it did not
+suppress the pager, for reasons not yet diagnosed -- `--no-pager` is the
+only thing confirmed to work, so use that.
+
 Both unit files set `LimitNOFILE=65536`, well above systemd's stingier
 per-service default. This is a backstop, not a confirmed fix for anything
 specific -- the actual fix for
