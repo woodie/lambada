@@ -21,6 +21,12 @@ import (
 	"github.com/justincampbell/timeago"
 )
 
+// scanDir defaults to a relative path so a plain `go build &&
+// ./lambada-web` from a checkout just works with no setup. Under systemd,
+// LAMBADA_ATTACHMENTS_DIR overrides it to the shared production location
+// (/srv/lambada/attachments) -- lambada-mta honors the same variable for
+// the same directory, since both binaries have to agree on it.
+//
 // listenAddr defaults to 0.0.0.0:8080, the same direct-expose setup
 // lambada-web has always used -- nginx (service/lambada-web.nginx.conf)
 // is optional, not assumed. Set LAMBADA_WEB_LISTEN_ADDR=127.0.0.1:8080
@@ -30,7 +36,7 @@ import (
 // culprit behind an intermittent zouk connect hang, issue #5) and
 // docs/DEVELOPMENT.md's "Reverse proxy (nginx)" section for setup/rollback.
 var (
-	scanDir    = "./attachments"
+	scanDir    = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
 )
 
