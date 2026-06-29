@@ -314,24 +314,39 @@ Changed here: `main.go`'s route registration (`GET /files.json`, still
 calling `handleScansJSON` -- name intentionally not changed), `scanfiles.go`'s
 `scanJSON.URL`/`json:"url"` field renamed to `Path`/`json:"path"`, and the
 corresponding test/doc/README references. Made by inspection only per the
-sandbox limitation above -- **not yet confirmed with `go build ./...` /
-`go test ./...` (or `ginkgo -r -v`) on a real machine.** `lambada-web` and
-`zouk` have to land their halves of this together (or with `zouk` left
-backward-compatible) since an old `zouk` build pointed at a freshly
-rebuilt `lambada-web` would 404 on `/scans.json` and fail to decode a
-listing missing the `url` key it expects -- there's no in-between state
-where both old and new clients/servers interoperate. See zouk's own
-`docs/COWORK.md` for that side of the same change.
+sandbox limitation above, then **confirmed on real hardware**: woodie ran
+`ginkgo-fd -r` on their Mac -- every suite green (Attachments, Lambada WEB
+including `GET /files.json`, Server, ScanFiles including `toScansJSON`).
+Committed as `602430c` ("Rename /scans.json to /files.json; rename url
+field to path") and tagged `2.0.0` (a major bump, not minor, since lambada
+passed 1.0 -- strict semver for a breaking wire-contract change). `zouk`
+has to land its half of this too (or stay backward-compatible) since an
+old `zouk` build pointed at a freshly rebuilt `lambada-web` would 404 on
+`/scans.json` and fail to decode a listing missing the `url` key it
+expects -- there's no in-between state where both old and new
+clients/servers interoperate. See zouk's own `docs/COWORK.md` for that
+side of the same change (not yet committed/tagged as of this writing).
+
+Deployed to the production Pi (`rackspace`) and verified this session:
+`curl http://localhost:8080/files.json` returns the new `path` key,
+`curl -i http://localhost:8080/scans.json` 404s as expected. One wrinkle
+hit along the way, worth recording: the Pi's checkout was sitting on a
+stale `install-as-service` branch (2 commits ahead of where `main` was
+*then*, but `main` had since gained the nginx-reverse-proxy and
+better-templates work -- including the equivalent systemd/`make install`
+setup that branch was trying to add). No merge was needed; `main` already
+superseded it, so the fix was just `git checkout main && git pull`
+(picking up `602430c`/`2.0.0` once pushed), `go build`, `make install`,
+`systemctl restart`. `install-as-service` itself is now dead weight on the
+remote -- worth deleting next time someone's doing branch cleanup.
 
 ## Next up
 
-- Confirm on real hardware: `go build ./...`, `go test ./...` (or
-  `ginkgo -r -v`), then a soak test of `lambada-web` under systemd over a
-  longer stretch (hours, with a handful of clients connecting and going
-  quiet) to confirm the timeout fix actually keeps it responsive --
-  unlike the pager fix, this one can't be fully confirmed by a quick
-  smoke test, since the original bug only showed up after the process had
-  been up for a while.
+- A longer soak test of `lambada-web` under systemd (hours, with a
+  handful of clients connecting and going quiet) to confirm the timeout
+  fix from issue #2 actually keeps it responsive over time, not just at
+  a quick smoke-test scale -- the original bug only showed up after the
+  process had been up for a while.
 - Consider whether `lambada-web` should also handle `SIGTERM` for a
   graceful `Shutdown()` instead of letting systemd hard-kill it on
   `restart`/`stop` -- not done this session, flagged in case a restart
