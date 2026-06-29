@@ -5,13 +5,17 @@
 ```
 cmd/lambada-mta/   SMTP server -- receives scans, saves them to attachments/
 cmd/lambada-web/   HTTP server -- lists/serves attachments/, JSON API
-attachments/       shared scan storage (gitignored; symlink to Samba if desired)
+attachments/       shared scan storage (gitignored; dev-only default --
+                    see LAMBADA_ATTACHMENTS_DIR below for the systemd path)
 service/           systemd unit files for both binaries
 ```
 
 Each binary is self-contained (`cmd/lambada-web` embeds its HTML template
-and CSS via `go:embed`), but both expect to be run with the repo root as
-their working directory, since each defaults to a relative `./attachments`.
+and CSS via `go:embed`). Both default to a relative `./attachments`, so a
+plain `go build && ./lambada-mta` (or `-web`) from the repo root just works
+with no setup. Under systemd, `LAMBADA_ATTACHMENTS_DIR` overrides this to
+the shared production location both services actually run against --
+see "Configuration" and "systemd Services" below.
 
 ## Dependencies
 
@@ -25,43 +29,52 @@ their working directory, since each defaults to a relative `./attachments`.
 ## Quick Start
 
 ```bash
-# Fetch dependencies
+# Fetch dependencies and build both binaries (or `make install` to also
+# put them on $PATH at /usr/local/bin -- see "systemd Services" below)
 go mod tidy
+make build
 
-# Build and run lambada-mta (listens on 0.0.0.0:2525)
-go build -o lambada-mta ./cmd/lambada-mta
+# Run lambada-mta (listens on 0.0.0.0:2525)
 ./lambada-mta
 
-# Build and run lambada-web (listens on 0.0.0.0:8080 by default), in
-# another shell
-go build -o lambada-web ./cmd/lambada-web
+# Run lambada-web (listens on 0.0.0.0:8080 by default), in another shell
 ./lambada-web
 ```
 
 Both default to `./attachments` (created automatically) and expect to be
-run from the repo root. `0.0.0.0:8080` is reachable from other machines on
-the LAN out of the box, no nginx required -- see "Reverse proxy (nginx)"
-below for the on-Pi setup, and the `LAMBADA_WEB_LISTEN_ADDR` override to
-switch lambada-web to loopback-only once nginx is actually fronting it.
+run from the repo root for ad hoc/dev use -- see "Configuration" below for
+the systemd-managed production path. `0.0.0.0:8080` is reachable from other
+machines on the LAN out of the box, no nginx required -- see "Reverse proxy
+(nginx)" below for the on-Pi setup, and the `LAMBADA_WEB_LISTEN_ADDR`
+override to switch lambada-web to loopback-only once nginx is actually
+fronting it.
 
 ## Configuration
 
 | Variable          | Binary        | Default         | Description                                  |
 |--------------------|--------------|-----------------|-----------------------------------------------|
-| `attachmentDir`    | lambada-mta  | `./attachments` | Where attachments are written                 |
+| `attachmentDir`    | lambada-mta  | `./attachments` | Where attachments are written. Override: `LAMBADA_ATTACHMENTS_DIR` |
 | `listenAddr`       | lambada-mta  | `0.0.0.0:2525`  | TCP address to listen on                      |
 | `maxFileAge`       | lambada-mta  | `24h`           | How long to retain attachments                |
 | `MaxMessageBytes`  | lambada-mta  | `25 MB`         | Maximum accepted message size                 |
-| `scanDir`          | lambada-web  | `./attachments` | Where scans are read from                     |
+| `scanDir`          | lambada-web  | `./attachments` | Where scans are read from. Override: `LAMBADA_ATTACHMENTS_DIR` |
 | `listenAddr`       | lambada-web  | `0.0.0.0:8080`  | TCP address to listen on (see below)          |
 
 The settings above are package-level `var`s, not flags or env vars
 (matching the original Ruby `mta.rb`/`web.rb`, which hardcoded ports too)
--- edit `cmd/<binary>/main.go` directly if you need to change them. The one
-exception is `lambada-web`'s `listenAddr`, which can be overridden without a
-rebuild by setting `LAMBADA_WEB_LISTEN_ADDR` -- added specifically so the
-nginx-vs-direct choice below is a one-line, no-rebuild switch rather than a
-code edit.
+-- edit `cmd/<binary>/main.go` directly if you need to change them. Two
+exceptions, both added for a specific operational need rather than general
+configurability:
+
+- `attachmentDir`/`scanDir`, overridden by `LAMBADA_ATTACHMENTS_DIR` (both
+  binaries read the same variable, since they have to agree on the
+  directory) -- added so a plain dev build keeps using the convenient
+  `./attachments` default while systemd points both services at the shared
+  production location, `/srv/lambada/attachments`, with no rebuild. See
+  "systemd Services" below.
+- `lambada-web`'s `listenAddr`, overridden by `LAMBADA_WEB_LISTEN_ADDR` --
+  added specifically so the nginx-vs-direct choice further down is a
+  one-line, no-rebuild switch rather than a code edit.
 
 ## Running Tests
 
@@ -144,13 +157,28 @@ Example output:
 
 The service files live at `service/lambada-mta.service` and
 `service/lambada-web.service`, written for the default Raspberry Pi OS
-`pi` user/home directory. If your Pi runs as a different user (this
-project's own Pi runs as `woodie`, not `pi`), edit `User=`,
-`WorkingDirectory=`, and `ExecStart=` in your local copy after `cp`-ing
-them in below -- don't commit that change back, since it'd break the
-default for everyone else cloning the repo.
+`pi` user. If your Pi runs as a different user (this project's own Pi runs
+as `woodie`, not `pi`), edit `User=` in your local copy after `cp`-ing it
+in below -- neither `ExecStart=` nor `Environment=LAMBADA_ATTACHMENTS_DIR=...`
+need touching, since `make install` always puts both binaries at
+`/usr/local/bin` and provisions `/srv/lambada/attachments` (chowned to
+whoever ran `make install`, expected to be the same account as `User=`
+here) regardless of which user that is. Don't commit the `User=` change
+back, since it'd break the default for everyone else cloning the repo.
 
-To install both on Raspberry Pi:
+Both unit files set `Environment=LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments`
+-- the shared production location both services read from/write to instead
+of the dev-only `./attachments` default (see "Configuration" above). This
+also means neither file needs a `WorkingDirectory=` anymore: every path
+either binary touches is now either embedded in the binary itself
+(`lambada-web`'s template/CSS) or set via this absolute env var, so it no
+longer matters where -- or whether -- the repo got checked out on the Pi at
+all once `make install` has run.
+
+`make install` (see Quick Start above) has to run first -- it's what puts
+both binaries at `/usr/local/bin` and creates `/srv/lambada/attachments`,
+which is where `ExecStart=`/`Environment=` in both unit files expect them.
+Then, to install both services on Raspberry Pi:
 
 ```bash
 sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/

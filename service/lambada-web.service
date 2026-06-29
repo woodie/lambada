@@ -5,19 +5,13 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/workspace/lambada
-ExecStart=/home/pi/workspace/lambada/lambada-web
+# Shared with lambada-mta.service -- both must point at the same directory.
+# Provisioned by `make install` (chowned to whoever ran it); see
+# docs/DEVELOPMENT.md's Configuration section.
+Environment=LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments
+ExecStart=/usr/local/bin/lambada-web
 Restart=always
-# Defense-in-depth alongside the newServer() timeout fix in main.go: a
-# zero-value http.Server (the bug behind #2) leaks one fd per connection
-# that goes idle without IdleTimeout ever reaping it. systemd's default
-# per-service LimitNOFILE is much lower than an interactive login shell's
-# ulimit -n -- which is almost certainly why the systemd-managed process
-# died in ~33 minutes while a manually-backgrounded one (inheriting the
-# shell's higher limit) kept running for hours on the exact same leak.
-# Raising the ceiling here doesn't fix the leak, but it buys headroom and
-# keeps this from being the tightest constraint again if some other leak
-# shows up later.
+# Backstop fd ceiling -- see docs/COWORK.md (issue #2) for why.
 LimitNOFILE=65536
 
 [Install]

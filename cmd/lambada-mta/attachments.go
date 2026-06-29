@@ -23,10 +23,27 @@ import (
 // attachmentDir is where attachments get saved, and maxFileAge is how long
 // cleanupOldFiles lets them sit before deleting them. Go port of
 // scandalous's ScanFiles::SCAN_FOLDER / ScanFiles::ONE_DAY_AGO.
+//
+// attachmentDir defaults to a relative path so a plain `go build &&
+// ./lambada-mta` from a checkout just works with no setup. Under systemd,
+// LAMBADA_ATTACHMENTS_DIR overrides it to the shared production location
+// (/srv/lambada/attachments -- see service/lambada-mta.service and
+// docs/DEVELOPMENT.md's Configuration section). lambada-web honors the same
+// variable for the same directory, since both binaries have to agree on it.
 var (
-	attachmentDir = "./attachments"
+	attachmentDir = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	maxFileAge    = 24 * time.Hour
 )
+
+// envOr returns the value of the named environment variable, or fallback if
+// it's unset or empty. Same helper as lambada-web's -- duplicated rather
+// than shared, since the two binaries don't have a common internal package.
+func envOr(name, fallback string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return fallback
+}
 
 func processAttachments(msg *mail.Message) error {
 	log.Println("Receiving message")

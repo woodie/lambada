@@ -43,12 +43,7 @@ The recommended way to get scans onto your Mac is `lambada-web`'s
 listing page -- either through the [zouk](https://github.com/woodie/zouk)
 client, or just a plain web browser pointed at the Pi (browsers flag
 the download as unsafe over plain HTTP, so expect an extra "Keep"
-click to confirm it anyway). Samba is also supported, as a **legacy
-option** for anyone who'd rather mount a network share than use either
-of those -- link `attachments/` to a Samba share (see Installation
-below) and skip running `lambada-web` entirely, since the two services
-don't depend on each other. It works, but it's noticeably slower and
-clunkier on a Pi than the alternatives above.
+click to confirm it anyway).
 
 <img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
 
@@ -63,15 +58,11 @@ cd ~/workspace
 git clone git@github.com:woodie/lambada.git
 cd lambada
 
-# Optional, legacy: link the attachments folder to a Samba share instead of
-# (or in addition to) browsing it through lambada-web. Most people should
-# just use the zouk client and skip this.
-ln -s /srv/samba/public attachments
-
-# Fetch dependencies and build both binaries
+# Fetch dependencies, build both binaries, install them to /usr/local/bin,
+# and provision /srv/lambada/attachments for the two services to share
+# (prompts for sudo only if those locations aren't already writable)
 go mod tidy
-go build -o lambada-mta ./cmd/lambada-mta
-go build -o lambada-web ./cmd/lambada-web
+make install
 
 # Redirect port 25 -> 2525 so lambada-mta can run as a non-root user.
 # lambada-web doesn't need this -- it's reachable directly on 0.0.0.0:8080.

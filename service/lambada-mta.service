@@ -5,12 +5,13 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/workspace/lambada
-ExecStart=/home/pi/workspace/lambada/lambada-mta
+# Shared with lambada-web.service -- both must point at the same directory.
+# Provisioned by `make install` (chowned to whoever ran it); see
+# docs/DEVELOPMENT.md's Configuration section.
+Environment=LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments
+ExecStart=/usr/local/bin/lambada-mta
 Restart=always
-# Matching lambada-web.service's LimitNOFILE -- mta hasn't shown the same
-# symptom, but there's no reason to leave it on a stingier default fd
-# ceiling than its sibling service.
+# Matching lambada-web.service's LimitNOFILE for consistency.
 LimitNOFILE=65536
 
 [Install]
