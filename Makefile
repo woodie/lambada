@@ -19,7 +19,10 @@ SUDO:=$(shell d="$(PREFIX)/bin"; while [ ! -d "$$d" ] && [ "$$d" != "/" ]; do d=
 # (not root, even when $(SUDO) was needed to create it), since lambada-mta/
 # -web run as whichever user `User=` in the service files names, which is
 # expected to be the same account that ran `make install`. See
-# docs/DEVELOPMENT.md's "systemd Services" section.
+# docs/DEVELOPMENT.md's "systemd Services" section. lambada-web's backups/
+# subdirectory (see backupsSubdirName in cmd/lambada-web/main.go) isn't
+# provisioned here -- it's created under ATTACHMENTS_DIR at runtime by
+# lambada-web itself, inheriting this same ownership automatically.
 OWNER:=$(shell id -un)
 GROUP:=$(shell id -gn)
 

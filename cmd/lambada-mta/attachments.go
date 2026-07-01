@@ -122,7 +122,15 @@ func cleanupOldFiles() {
 		return
 	}
 	for _, entry := range entries {
-		if entry.Name() == ".DS_Store" || entry.IsDir() {
+		// Only *.pdf files (case-sensitive, matching lambada-web's
+		// scanfiles.go Glob("*.pdf") -- both binaries agree on what counts
+		// as a scan) are lambada-mta's concern. This one check covers
+		// .DS_Store (no .pdf extension, no longer needs its own name
+		// check) and also leaves lambada-web's backups/ subdirectory --
+		// and anything else a user or another process drops in
+		// attachmentDir -- alone, on top of the entry.IsDir() check
+		// already skipping directories regardless of name.
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".pdf" {
 			continue
 		}
 		info, err := entry.Info()

@@ -37,7 +37,11 @@ This repo builds two independent binaries that share the same
   timestamps, plus a `GET /files.json` API used by the
   [zouk](https://github.com/woodie/zouk) Mac client. This is a Go port of
   the [scandalous](https://github.com/woodie/scandalous) project's Sinatra
-  web server.
+  web server. It also serves `/backups`, a second listing page (same look)
+  for uploading and downloading arbitrary files -- any name or extension,
+  and uploading a name that already exists there replaces it. Backups live
+  in `attachments/backups/`, a subdirectory `lambada-mta` never looks at
+  (it only ever touches `*.pdf` files directly inside `attachments/`).
 
 The recommended way to get scans onto your Mac is `lambada-web`'s
 listing page -- either through the [zouk](https://github.com/woodie/zouk)

@@ -75,7 +75,7 @@ var _ = Describe("Attachments", func() {
 	})
 
 	Describe("cleanupOldFiles", func() {
-		var pdf, dss, dir string
+		var pdf, dss, dir, stray, backup string
 
 		BeforeEach(func() {
 			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
@@ -84,6 +84,16 @@ var _ = Describe("Attachments", func() {
 			os.WriteFile(dss, []byte("data"), 0644)
 			dir = filepath.Join(attachmentDir, "subdir")
 			os.Mkdir(dir, 0755)
+			// A non-.pdf file directly in attachmentDir -- covers the
+			// general case, not just .DS_Store specifically.
+			stray = filepath.Join(attachmentDir, "notes.txt")
+			os.WriteFile(stray, []byte("data"), 0644)
+			// lambada-web's backups/ subdirectory (see backupsSubdirName
+			// in cmd/lambada-web/main.go) -- mta must never touch this,
+			// same as any other subdirectory.
+			backup = filepath.Join(attachmentDir, "backups", "report.pdf")
+			os.MkdirAll(filepath.Dir(backup), 0755)
+			os.WriteFile(backup, []byte("data"), 0644)
 		})
 
 		Context("when entries are recent", func() {
@@ -99,6 +109,8 @@ var _ = Describe("Attachments", func() {
 				os.Chtimes(pdf, old, old)
 				os.Chtimes(dir, old, old)
 				os.Chtimes(dss, old, old)
+				os.Chtimes(stray, old, old)
+				os.Chtimes(backup, old, old)
 			})
 
 			It("deletes the PDF file", func() {
@@ -112,6 +124,14 @@ var _ = Describe("Attachments", func() {
 			It("keeps the directory", func() {
 				cleanupOldFiles()
 				Expect(dir).To(BeADirectory())
+			})
+			It("keeps a stray non-PDF file", func() {
+				cleanupOldFiles()
+				Expect(stray).To(BeAnExistingFile())
+			})
+			It("never touches files inside a subdirectory, even a *.pdf one", func() {
+				cleanupOldFiles()
+				Expect(backup).To(BeAnExistingFile())
 			})
 		})
 	})
