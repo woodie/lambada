@@ -20,6 +20,15 @@ func get(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// del performs an in-process DELETE against newMux() without binding a
+// real listener. Named del, not delete, so it doesn't shadow the builtin.
+func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodDelete, path, nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	return rec
+}
+
 // Lambada WEB -- the HTTP routes and the page/JSON they serve (the
 // scanfiles.go/server.go "work" they call into has its own test files).
 var _ = Describe("Lambada WEB", func() {
@@ -80,6 +89,34 @@ var _ = Describe("Lambada WEB", func() {
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Header().Get("Content-Disposition")).To(ContainSubstring(file))
 				Expect(rec.Body.String()).To(Equal("content"))
+			})
+		})
+	})
+
+	// The RESTful DELETE counterpart to GET /download/{filename} -- same
+	// resource path, different verb, rather than a separate
+	// "/delete/{filename}" route. See handleDelete in main.go.
+	Describe("DELETE /download/{filename}", func() {
+		Context("when the file is missing", func() {
+			It("responds with 404", func() {
+				rec := del(mux, "/download/"+file)
+				Expect(rec.Code).To(Equal(http.StatusNotFound))
+			})
+		})
+
+		Context("when the file exists", func() {
+			BeforeEach(writeFile)
+
+			It("responds with 204 and removes the file", func() {
+				rec := del(mux, "/download/"+file)
+				Expect(rec.Code).To(Equal(http.StatusNoContent))
+				Expect(filepath.Join(scanDir, file)).NotTo(BeAnExistingFile())
+			})
+
+			It("leaves the file gone for a subsequent GET", func() {
+				del(mux, "/download/"+file)
+				rec := get(mux, "/download/"+file)
+				Expect(rec.Code).To(Equal(http.StatusNotFound))
 			})
 		})
 	})

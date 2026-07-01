@@ -133,6 +133,10 @@ curl smtp://localhost:2525 \
 curl http://localhost:8080/
 curl http://localhost:8080/files.json
 curl -OJ http://localhost:8080/download/1234567890.pdf
+
+# Delete is the same resource path, just DELETE instead of GET -- see
+# handleDelete in main.go. 204 on success, 404 if it's already gone.
+curl -i -X DELETE http://localhost:8080/download/1234567890.pdf
 ```
 
 ## Logging

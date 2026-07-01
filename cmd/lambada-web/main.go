@@ -113,14 +113,26 @@ func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleDownload serves a single file out of scanDir. net/http's ServeMux
-// already redirects requests containing ".." path segments to their cleaned
-// equivalent before this handler ever runs; the checks below are a second,
-// defense-in-depth layer in case that ever changes (e.g. a future router
-// swap) or a filename containing "/" or ".." ends up on disk some other way.
-func handleDownload(w http.ResponseWriter, r *http.Request) {
-	name := filepath.Base(r.PathValue("filename"))
+// sanitizeFilename reduces raw to its base name and rejects anything that
+// isn't a plain, single-segment filename. net/http's ServeMux already
+// redirects requests containing ".." path segments to their cleaned
+// equivalent before any handler runs; this is a second, defense-in-depth
+// layer in case that ever changes (e.g. a future router swap) or a
+// filename containing "/" or ".." ends up on disk some other way. Shared by
+// handleDownload and handleDelete, so there's one place guarding against
+// directory traversal rather than two copies of the same check.
+func sanitizeFilename(raw string) (string, bool) {
+	name := filepath.Base(raw)
 	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
+		return "", false
+	}
+	return name, true
+}
+
+// handleDownload serves a single file out of scanDir.
+func handleDownload(w http.ResponseWriter, r *http.Request) {
+	name, ok := sanitizeFilename(r.PathValue("filename"))
+	if !ok {
 		http.NotFound(w, r)
 		return
 	}
@@ -137,12 +149,44 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
+// handleDelete removes a single file out of scanDir -- the DELETE
+// counterpart to handleDownload, registered on the exact same
+// "/download/{filename}" resource path (GET fetches it, DELETE removes
+// it: same resource, different verb, rather than a separate RPC-style
+// "/delete/{filename}" route). Browsers can't submit an HTML form with
+// method="DELETE", so the trash icon in listing.html.tmpl calls this via
+// a small inline fetch(), not a <form> post.
+func handleDelete(w http.ResponseWriter, r *http.Request) {
+	name, ok := sanitizeFilename(r.PathValue("filename"))
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	path := filepath.Join(scanDir, name)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("File not found"))
+		return
+	}
+
+	if err := os.Remove(path); err != nil {
+		log.Printf("delete error: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", handleIndex)
 	mux.HandleFunc("GET /style.css", handleStyle)
 	mux.HandleFunc("GET /files.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
+	mux.HandleFunc("DELETE /download/{filename}", handleDelete)
 	return mux
 }
 

@@ -12,11 +12,28 @@
     <ul>
       {{range .Scans}}
         <li>
+          <button type="button" class="delete" onclick="deleteFile('{{.Name}}', '{{timeAgo .Time timeNow}}')">&#128465;</button>
           <a href="/download/{{.Name}}">&#128196; {{humanSize .Size}}</a>
           <span>{{timeAgo .Time timeNow}} ago</span>
         </li>
       {{end}}
     </ul>
   {{end}}
+  <script>
+    function deleteFile(name, timeAgo) {
+      if (!confirm('Delete this scan from ' + timeAgo + ' ago?')) return;
+      fetch('/download/' + encodeURIComponent(name), { method: 'DELETE' })
+        .then(function (res) {
+          if (res.ok) {
+            location.reload();
+          } else {
+            alert('Delete failed.');
+          }
+        })
+        .catch(function () {
+          alert('Delete failed.');
+        });
+    }
+  </script>
 </body>
 </html>

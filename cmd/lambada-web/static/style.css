@@ -26,3 +26,13 @@ a {
 a:hover {
 	text-decoration: underline;
 }
+
+li button.delete {
+	background: none;
+	border: none;
+	color: inherit;
+	font-size: 0.9rem;
+	line-height: 1;
+	padding: 0 20px 0 0;
+	cursor: pointer;
+}
