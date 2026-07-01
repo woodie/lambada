@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Backups</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Backups</h2>
+  <form method="POST" action="/backups" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+  {{if not .Files}}
+    <p>No files found in the directory.</p>
+  {{else}}
+    <ul>
+      {{range .Files}}
+        <li>
+          <a href="/download/backups/{{.Name}}">&#128196; {{.Name}} ({{humanSize .Size}})</a>
+          <span>{{timeAgo .Time timeNow}} ago</span>
+        </li>
+      {{end}}
+    </ul>
+  {{end}}
+</body>
+</html>

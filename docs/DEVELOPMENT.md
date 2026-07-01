@@ -4,18 +4,24 @@
 
 ```
 cmd/lambada-mta/   SMTP server -- receives scans, saves them to attachments/
-cmd/lambada-web/   HTTP server -- lists/serves attachments/, JSON API
+cmd/lambada-web/   HTTP server -- lists/serves attachments/, JSON API, /backups
 attachments/       shared scan storage (gitignored; dev-only default --
-                    see LAMBADA_ATTACHMENTS_DIR below for the systemd path)
+                    see LAMBADA_ATTACHMENTS_DIR below for the systemd path).
+                    attachments/backups/ is lambada-web's /backups storage,
+                    a subdirectory rather than a separate directory/env var
+                    -- see "Configuration" below.
 service/           systemd unit files for both binaries
 ```
 
-Each binary is self-contained (`cmd/lambada-web` embeds its HTML template
+Each binary is self-contained (`cmd/lambada-web` embeds its HTML templates
 and CSS via `go:embed`). Both default to a relative `./attachments`, so a
 plain `go build && ./lambada-mta` (or `-web`) from the repo root just works
 with no setup. Under systemd, `LAMBADA_ATTACHMENTS_DIR` overrides this to
-the shared production location both services actually run against --
-see "Configuration" and "systemd Services" below.
+the production location both binaries share -- see "Configuration" and
+"systemd Services" below. `lambada-web`'s `/backups` storage lives at
+`<scanDir>/backups` (dev: `./attachments/backups`; production:
+`/srv/lambada/attachments/backups`), so it automatically follows
+`LAMBADA_ATTACHMENTS_DIR` too, with no separate variable.
 
 ## Dependencies
 
@@ -51,19 +57,20 @@ fronting it.
 
 ## Configuration
 
-| Variable          | Binary        | Default         | Description                             |
-|--------------------|--------------|-----------------|-----------------------------------------|
-| `attachmentDir`    | lambada-mta  | `./attachments` | Override with `LAMBADA_ATTACHMENTS_DIR` |
-| `listenAddr`       | lambada-mta  | `0.0.0.0:2525`  | TCP address to listen on                |
-| `maxFileAge`       | lambada-mta  | `24h`           | How long to retain attachments          |
-| `MaxMessageBytes`  | lambada-mta  | `25 MB`         | Maximum accepted message size           |
-| `scanDir`          | lambada-web  | `./attachments` | Override with `LAMBADA_ATTACHMENTS_DIR` |
-| `listenAddr`       | lambada-web  | `0.0.0.0:8080`  | TCP address to listen on (see below)    |
+| Variable          | Binary        | Default                    | Description                             |
+|--------------------|--------------|----------------------------|------------------------------------------|
+| `attachmentDir`    | lambada-mta  | `./attachments`            | Override with `LAMBADA_ATTACHMENTS_DIR` |
+| `listenAddr`       | lambada-mta  | `0.0.0.0:2525`             | TCP address to listen on                |
+| `maxFileAge`       | lambada-mta  | `24h`                      | How long to retain attachments          |
+| `MaxMessageBytes`  | lambada-mta  | `25 MB`                    | Maximum accepted message size           |
+| `scanDir`          | lambada-web  | `./attachments`            | Override with `LAMBADA_ATTACHMENTS_DIR` |
+| `backupsDir()`     | lambada-web  | `<scanDir>/backups`        | Derived, not independently configurable |
+| `listenAddr`       | lambada-web  | `0.0.0.0:8080`             | TCP address to listen on (see below)    |
 
 The settings above are package-level `var`s, not flags or env vars
 (matching the original Ruby `mta.rb`/`web.rb`, which hardcoded ports too)
 -- edit `cmd/<binary>/main.go` directly if you need to change them. Two
-exceptions, both added for a specific operational need rather than general
+exceptions, each added for a specific operational need rather than general
 configurability:
 
 - `attachmentDir`/`scanDir`, overridden by `LAMBADA_ATTACHMENTS_DIR` (both
@@ -75,6 +82,19 @@ configurability:
 - `lambada-web`'s `listenAddr`, overridden by `LAMBADA_WEB_LISTEN_ADDR` --
   added specifically so the nginx-vs-direct choice further down is a
   one-line, no-rebuild switch rather than a code edit.
+
+`backupsDir()` (lambada-web's `/backups` storage) is deliberately not a
+third exception: it's always `<scanDir>/backups`, a plain function of
+`scanDir` rather than its own overridable var, so it rides along with
+`LAMBADA_ATTACHMENTS_DIR` automatically instead of needing its own env var,
+its own `make install` provisioning, or its own systemd `Environment=`
+line. It also means `/download/{filename...}` can serve a backup file
+directly at `/download/backups/<name>` (one level under `scanDir`) instead
+of needing a second download route -- see backupsSubdirName's comment in
+`cmd/lambada-web/main.go`. lambada-mta's `cleanupOldFiles` only ever
+touches `*.pdf` files directly inside `attachmentDir` (see
+`cmd/lambada-mta/attachments.go`), so it never descends into or deletes
+anything under `backups/`.
 
 ## Running Tests
 
@@ -133,6 +153,14 @@ curl smtp://localhost:2525 \
 curl http://localhost:8080/
 curl http://localhost:8080/files.json
 curl -OJ http://localhost:8080/download/1234567890.pdf
+
+# /backups: any filename/extension, upload replaces a file of the same name.
+# Downloads go through the same /download route as scans, one path segment
+# deeper (backups/<name>), since backupsDir() is scanDir's "backups"
+# subdirectory.
+curl http://localhost:8080/backups
+curl -F file=@/path/to/some-file.zip http://localhost:8080/backups
+curl -OJ http://localhost:8080/download/backups/some-file.zip
 ```
 
 ## Logging
@@ -170,12 +198,14 @@ back, since it'd break the default for everyone else cloning the repo.
 
 Both unit files set `Environment=LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments`
 -- the shared production location both services read from/write to instead
-of the dev-only `./attachments` default (see "Configuration" above). This
-also means neither file needs a `WorkingDirectory=` anymore: every path
-either binary touches is now either embedded in the binary itself
-(`lambada-web`'s template/CSS) or set via this absolute env var, so it no
-longer matters where -- or whether -- the repo got checked out on the Pi at
-all once `make install` has run.
+of the dev-only `./attachments` default (see "Configuration" above).
+`lambada-web` creates `/srv/lambada/attachments/backups` under this at
+startup the first time it runs there, so there's no second `Environment=`
+line for it. This also means neither file needs a `WorkingDirectory=`
+anymore: every path either binary touches is now either embedded in the
+binary itself (`lambada-web`'s templates/CSS) or set via this absolute env
+var, so it no longer matters where -- or whether -- the repo got checked
+out on the Pi at all once `make install` has run.
 
 `make install` (see Quick Start above) has to run first -- it's what puts
 both binaries at `/usr/local/bin` and creates `/srv/lambada/attachments`,

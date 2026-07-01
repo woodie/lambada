@@ -17,7 +17,8 @@
 # Go modules download cache
 vendor/
 
-# Saved attachments (probably don't want these in source control)
+# Saved attachments (probably don't want these in source control) --
+# lambada-web's backups/ subdirectory lives inside this and is covered too.
 attachments
 
 # macOS
