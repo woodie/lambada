@@ -39,11 +39,6 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 	"\r\n" + base64.StdEncoding.EncodeToString([]byte("fake pdf content")) + "\r\n" +
 	"--boundary--\r\n"
 
-// Attachments mirrors attachments.go -- the Go port of scandalous's
-// ScanFiles.cleanup/.detach plus the MIME parsing mta.rb gets for free from
-// the mail gem. mta.rb itself has no spec file (it's a few lines of
-// MidiSmtpServer wiring); main.go's Backend/Session are the same kind of
-// untested glue here, for the same reason.
 var _ = Describe("Attachments", func() {
 
 	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
