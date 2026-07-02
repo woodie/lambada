@@ -12,7 +12,7 @@
     <ul>
       {{range .Scans}}
         <li>
-          <button type="button" class="delete" onclick="deleteFile('{{.Name}}', '{{timeAgo .Time timeNow}}')">&#128465;</button>
+          <button type="button" class="delete" onclick="deleteFile('{{.Name}}', '{{printf "Delete this scan from %s ago?" (timeAgo .Time timeNow)}}')">&#128465;</button>
           <a href="/download/{{.Name}}">&#128196; {{humanSize .Size}}</a>
           <span>{{timeAgo .Time timeNow}} ago</span>
         </li>
@@ -20,8 +20,8 @@
     </ul>
   {{end}}
   <script>
-    function deleteFile(name, timeAgo) {
-      if (!confirm('Delete this scan from ' + timeAgo + ' ago?')) return;
+    function deleteFile(name, confirmMessage) {
+      if (!confirm(confirmMessage)) return;
       fetch('/download/' + encodeURIComponent(name), { method: 'DELETE' })
         .then(function (res) {
           if (res.ok) {
