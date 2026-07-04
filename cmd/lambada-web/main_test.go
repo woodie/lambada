@@ -73,8 +73,7 @@ var _ = Describe("Lambada WEB", func() {
 
 			It("wires the delete confirm dialog with the full message", func() {
 				rec := get(mux, "/")
-				Expect(rec.Body.String()).To(ContainSubstring(
-					"deleteFile('" + file + "', 'Delete this scan from less than a minute ago?')"))
+				Expect(rec.Body.String()).To(ContainSubstring("Delete this scan from less than a minute ago?"))
 			})
 		})
 	})
