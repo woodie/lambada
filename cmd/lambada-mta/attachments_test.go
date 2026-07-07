@@ -63,7 +63,7 @@ var _ = Describe("Attachments", func() {
 			It("does not error", func() {
 				target := GinkgoT().TempDir()
 				attachmentDir = filepath.Join(GinkgoT().TempDir(), "link")
-				os.Symlink(target, attachmentDir)
+				_ = os.Symlink(target, attachmentDir)
 				Expect(func() { checkAttachmentDir() }).NotTo(Panic())
 			})
 		})
@@ -74,11 +74,11 @@ var _ = Describe("Attachments", func() {
 
 		BeforeEach(func() {
 			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
-			os.WriteFile(pdf, []byte("data"), 0644)
+			_ = os.WriteFile(pdf, []byte("data"), 0644)
 			dss = filepath.Join(attachmentDir, ".DS_Store")
-			os.WriteFile(dss, []byte("data"), 0644)
+			_ = os.WriteFile(dss, []byte("data"), 0644)
 			dir = filepath.Join(attachmentDir, "subdir")
-			os.Mkdir(dir, 0755)
+			_ = os.Mkdir(dir, 0755)
 		})
 
 		Context("when entries are recent", func() {
@@ -91,9 +91,9 @@ var _ = Describe("Attachments", func() {
 		Context("when entries are older", func() {
 			BeforeEach(func() {
 				old := time.Now().Add(-25 * time.Hour)
-				os.Chtimes(pdf, old, old)
-				os.Chtimes(dir, old, old)
-				os.Chtimes(dss, old, old)
+				_ = os.Chtimes(pdf, old, old)
+				_ = os.Chtimes(dir, old, old)
+				_ = os.Chtimes(dss, old, old)
 			})
 
 			It("deletes the PDF file", func() {
