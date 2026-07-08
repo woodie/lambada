@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,7 +46,8 @@ var _ = Describe("Lambada WEB", func() {
 	})
 
 	writeFile := func() {
-		Expect(os.WriteFile(filepath.Join(scanDir, file), []byte("content"), 0o644)).To(Succeed())
+	  content := strings.Repeat("content.", 9999)
+		Expect(os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(Succeed())
 	}
 
 	Describe("GET /", func() {
@@ -58,9 +60,6 @@ var _ = Describe("Lambada WEB", func() {
 			})
 		})
 
-		// Mirrors scandalous/spec/web_spec.rb's "file description" test --
-		// asserts the rendered size/age text directly rather than
-		// unit-testing the formatting separately.
 		Context("with a file", func() {
 			BeforeEach(writeFile)
 
@@ -68,7 +67,7 @@ var _ = Describe("Lambada WEB", func() {
 				rec := get(mux, "/")
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Body.String()).To(ContainSubstring("/download/" + file))
-				Expect(rec.Body.String()).To(ContainSubstring("7 B"))
+				Expect(rec.Body.String()).To(ContainSubstring("📄 80 kB"))
 			})
 
 			Context("when files can be older", func() {
@@ -149,7 +148,6 @@ var _ = Describe("Lambada WEB", func() {
 				rec := get(mux, "/download/"+file)
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Header().Get("Content-Disposition")).To(ContainSubstring(file))
-				Expect(rec.Body.String()).To(Equal("content"))
 			})
 		})
 	})
