@@ -341,6 +341,33 @@ superseded it, so the fix was just `git checkout main && git pull`
 `systemctl restart`. `install-as-service` itself is now dead weight on the
 remote -- worth deleting next time someone's doing branch cleanup.
 
+## This session: filled in `main_test.go`'s `timeAgo` cases
+
+`cmd/lambada-web/main_test.go`'s "with files can be older" block (four
+age cases: just now, 3 minutes, 15 hours, 30 hours) was a stub --
+`var time // FIXME` and empty `BeforeEach()`s -- left that way pending
+this pass. Filled in to mirror `scandalous/spec/web_spec.rb`'s
+equivalent block, with one necessary deviation: Ruby's lazy
+`let(:time)`, overridden per nested `context`, doesn't translate
+directly to Ginkgo, since Ginkgo runs outer `BeforeEach`s before inner
+ones -- a single shared outer `before { File.utime(time, ...) }` would
+fire before the inner context's `time` override existed. Used a
+`setFileAge(age time.Duration)` closure instead, called from each
+inner `BeforeEach` with `os.Chtimes`.
+
+Also caught and fixed a pre-existing bug in the stub while filling it
+in: the "three minutes ago" case asserted `"less than 3 minutes"`.
+Reading `github.com/justincampbell/timeago`'s `FromDuration` source
+confirmed 3 minutes actually renders as `"3 minutes ago"` (matching
+what `web_spec.rb` itself asserts) -- both specs' `it` descriptions say
+"less than 3 minutes ago", which is a pre-existing mislabel in the
+Ruby original, kept as-is (with a comment) rather than "fixed", per
+the one-for-one mirroring goal.
+
+Made by inspection only per the sandbox limitation above, then
+**confirmed on real hardware**: woodie ran `ginkgo-fd cmd/lambada-web`
+on their Mac -- 22/22 specs passing, including all four new age cases.
+
 ## Next up
 
 - A longer soak test of `lambada-web` under systemd (hours, with a

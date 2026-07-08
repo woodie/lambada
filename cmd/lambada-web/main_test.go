@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -68,7 +69,49 @@ var _ = Describe("Lambada WEB", func() {
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Body.String()).To(ContainSubstring("/download/" + file))
 				Expect(rec.Body.String()).To(ContainSubstring("7 B"))
-				Expect(rec.Body.String()).To(ContainSubstring("less than a minute ago"))
+			})
+
+			Context("with files can be older", func() {
+				setFileAge := func(age time.Duration) {
+					when := time.Now().Add(-age)
+					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
+				}
+
+				Context("just now", func() {
+					BeforeEach(func() { setFileAge(0) })
+
+					It("displays less than a minute ago", func() {
+						rec := get(mux, "/")
+						Expect(rec.Body.String()).To(ContainSubstring("less than a minute ago"))
+					})
+				})
+
+				Context("three minutes ago", func() {
+					BeforeEach(func() { setFileAge(3 * time.Minute) })
+
+					It("displays 3 minutes ago", func() {
+						rec := get(mux, "/")
+						Expect(rec.Body.String()).To(ContainSubstring("3 minutes ago"))
+					})
+				})
+
+				Context("fifteen hours ago", func() {
+					BeforeEach(func() { setFileAge(15 * time.Hour) })
+
+					It("displays about 15 hours ago", func() {
+						rec := get(mux, "/")
+						Expect(rec.Body.String()).To(ContainSubstring("about 15 hours ago"))
+					})
+				})
+
+				Context("thirty hours ago", func() {
+					BeforeEach(func() { setFileAge(30 * time.Hour) })
+
+					It("displays 1 day ago", func() {
+						rec := get(mux, "/")
+						Expect(rec.Body.String()).To(ContainSubstring("1 day ago"))
+					})
+				})
 			})
 
 			It("wires the delete confirm dialog with the full message", func() {
