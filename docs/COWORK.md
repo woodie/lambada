@@ -532,8 +532,11 @@ existing single-argument `{{timeAgo $file.Time}}` call.
 `go.mod` drops `justincampbell/timeago` and its indirect
 `justincampbell/bigduration` entirely, adding `github.com/woodie/humane
 v0.1.0` in their place. Made in the sandbox (no Go toolchain -- see
-"Sandbox limitation" above), so `go.mod`/`go.sum` are hand-edited to the
-best approximation; run `go mod tidy` locally to let Go regenerate
-`go.sum` and confirm resolution, then `go test ./...` to confirm the
-updated `main_test.go` fixture (`"15 hours ago"`, no `about`) passes
-against the real module.
+"Sandbox limitation" above), so `go.mod`/`go.sum` were hand-edited to the
+best approximation, then **confirmed on real hardware**: woodie ran `go
+mod tidy` (which downloaded `humane v0.1.0` and regenerated `go.sum`)
+and `go test ./...` -- 44/44 passing, including the updated `"15 hours
+ago"` fixture. Also fixed a leftover non-English `It` description
+(`"displays a future"` -> `"displays 3 minutes from now"`) to match
+`scandalous`'s equivalent spec wording. Tagged and released as `2.2.0`
+(`docs/releases/2.2.0.md`), pushed to GitHub.
