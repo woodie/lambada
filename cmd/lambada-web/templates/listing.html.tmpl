@@ -10,12 +10,12 @@
     <p>No files found in the directory.</p>
   {{else}}
     <ul>
-      {{range .Scans}}
+      {{range $file := .Scans}}
         <li>
-          <button type="button" class="delete" onclick="deleteFile('{{.Name}}',
-          '{{printf "Delete this scan from %s?" (timeAgo .Time)}}')">🗑</button>
-          <a href="/download/{{.Name}}">📄 {{humanSize .Size}}</a>
-          <span>{{timeAgo .Time}}</span>
+          <button type="button" class="delete" onclick="deleteFile('{{$file.Name}}',
+          '{{printf "Delete this scan from %s?" (timeAgo $file.Time)}}')">🗑</button>
+          <a href="/download/{{$file.Name}}">📄 {{humanSize $file.Size}}</a>
+          <span>{{timeAgo $file.Time}}</span>
         </li>
       {{end}}
     </ul>
