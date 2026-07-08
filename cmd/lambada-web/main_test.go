@@ -118,6 +118,24 @@ var _ = Describe("Lambada WEB", func() {
 				rec := get(mux, "/")
 				Expect(rec.Body.String()).To(ContainSubstring("Delete this scan from less than a minute ago?"))
 			})
+
+			// Proves the fix for lambada#15: timeAgo used to compute
+			// now.Sub(t).Abs(), which collapses a future mtime (clock
+			// skew, a malformed server timestamp) into the same "X ago"
+			// text a past file gets. timeago.FromTime is direction-aware,
+			// so a future file reads "from now" instead.
+			Context("with a file from the future", func() {
+				BeforeEach(func() {
+					when := time.Now().Add(3 * time.Minute)
+					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
+				})
+
+				It("displays a future-relative time instead of 'ago'", func() {
+					rec := get(mux, "/")
+					Expect(rec.Body.String()).To(ContainSubstring("3 minutes from now"))
+					Expect(rec.Body.String()).NotTo(ContainSubstring("ago"))
+				})
+			})
 		})
 	})
 

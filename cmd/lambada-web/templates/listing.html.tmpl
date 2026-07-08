@@ -13,9 +13,9 @@
       {{range .Scans}}
         <li>
           <button type="button" class="delete" onclick="deleteFile('{{.Name}}',
-          '{{printf "Delete this scan from %s ago?" (timeAgo .Time timeNow)}}')">🗑</button>
+          '{{printf "Delete this scan from %s?" (timeAgo .Time)}}')">🗑</button>
           <a href="/download/{{.Name}}">📄 {{humanSize .Size}}</a>
-          <span>{{timeAgo .Time timeNow}} ago</span>
+          <span>{{timeAgo .Time}}</span>
         </li>
       {{end}}
     </ul>

@@ -217,6 +217,48 @@ shouldn't need a comment defending the choice.
    age string would need `handleIndex` to accept an injected
    template/clock regardless of how `timeNow`'s value arrives, so the
    `.Now` plumbing wasn't earning its keep. Commit `cccb5b1`.
+5. Switched `timeAgo` from `timeago.FromDuration(now.Sub(t).Abs())` to
+   `timeago.FromTime` directly ([issue #15]
+   (https://github.com/woodie/lambada/issues/15)). `FromDuration` takes
+   a bare duration, so the caller has to normalize the sign with
+   `.Abs()` -- which throws away direction: a future mtime (clock skew,
+   a malformed server timestamp) would render identically to a past one.
+   `FromTime` takes the two timestamps itself and picks "ago" or "from
+   now" accordingly, so no caller-side guard is needed. The wrinkle
+   flagged when this was first scoped -- `FromTime` self-appends "
+   ago"/" from now", where `FromDuration` returns bare text and the
+   template appended its own " ago" -- is resolved by no longer
+   double-appending: the template calls `{{timeAgo .Time}}` and prints
+   the result as-is. `timeNow` and the explicit `now` parameter are gone
+   -- `timeAgo` is back to a single argument, `timeago.FromTime` reaching
+   for the real clock itself, same as step 4's reasoning for why the
+   dependency-injectable version wasn't earning its keep. Existing
+   render-test assertions ("less than a minute ago", "about 15 hours
+   ago", etc.) were unaffected -- `FromTime`'s output for a past time is
+   byte-identical to the old `FromDuration` + template-appended-"ago"
+   text. Added one new case proving the actual fix: a file with a future
+   mtime now renders "3 minutes from now" instead of colliding into "3
+   minutes ago".
+
+   woodie's brief for this change, for the record: don't fight the
+   library appending "ago" itself; prefer whatever can be called
+   straight from the template without a caller-side future/past guard;
+   accept minor wording differences from the Ruby/Rails original; and
+   lean toward keeping Go and zouk's Swift implementation
+   (`ScanEntry.timeAgo(relativeTo:)` in
+   `zouk/Sources/ZoukKit/ScanEntry.swift`) similar. Swift's version
+   still takes an explicit `relativeTo:` and strips the formatter's own
+   trailing " ago" rather than embracing it -- a deliberate difference,
+   not an oversight: zouk's `RelativeDateTimeFormatter` has no built-in
+   "less than a minute" bucket the way `FromDuration` does, so
+   `ScanEntry.timeAgo` needs its own `< 30`-second clamp either way, and
+   at that point keeping the explicit clock and controlling the suffix
+   itself cost it nothing extra. Go's `FromTime` has no such gap to
+   paper over, so the more direct one-argument call was the simpler
+   choice there. Not applied to `scandalous`'s Ruby (still
+   `distance_of_time_in_words(from_time, Time.now).abs`-based, matching
+   real Rails behavior, future-mtime handling included) -- untouched
+   since nothing prompted revisiting it this session.
 
 ## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
 

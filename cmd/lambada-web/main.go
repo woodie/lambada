@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/justincampbell/timeago"
@@ -58,20 +57,27 @@ var styleCSS []byte
 
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
 // directly from the template -- same shape as listing.erb calling
-// number_to_human_size/time_ago_in_words inline.
+// number_to_human_size/time_ago_in_words inline. timeAgo uses
+// timeago.FromTime rather than FromDuration: FromTime is direction-aware
+// (renders "in 3 minutes" for a future time instead of requiring the
+// caller to normalize the sign with .Abs(), which would collapse future
+// and past into the same "3 minutes ago" text -- see
+// https://github.com/woodie/lambada/issues/15) and it already appends
+// its own "ago"/"from now" suffix, so the template no longer adds one.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
 			"humanSize": func(size int64) string { return humanize.Bytes(uint64(size)) },
-			"timeAgo":   func(t, now time.Time) string { return timeago.FromDuration(now.Sub(t).Abs()) },
-			"timeNow":   time.Now,
+			"timeAgo":   timeago.FromTime,
 		}).
 		ParseFS(templatesFS, "templates/listing.html.tmpl"),
 )
 
 // listingData is what listing.html.tmpl renders: just the raw scan
-// listing -- the template fetches the current time itself via timeNow to
-// compute each scan's age via timeAgo.
+// listing -- timeAgo (timeago.FromTime) reaches for the real clock
+// itself to compute each scan's age, the same way Ruby's
+// time_ago_in_words(from_time) defaults its to_time to Time.now rather
+// than taking it as an argument.
 type listingData struct {
 	Scans []scan
 }
