@@ -508,3 +508,32 @@ on their Mac -- 22/22 specs passing, including all four new age cases.
   deliberately so `main_test.go` mirrors `scan_files_spec.rb`/
   `web_spec.rb`'s structure one-for-one -- flagged here for visibility,
   not because it needs reconsidering.
+
+## This session: swapped humanSize/timeAgo for the humane gem
+
+The hand-rolled `humanSize` (step 8 above) and
+`github.com/justincampbell/timeago`-backed `timeAgo` are both replaced
+by [`humane`](https://github.com/woodie/humane)
+(`humane.SizeFormatter`/`humane.NewTimeFormatter`), a small module
+extracted from this exact logic so `lambada` and `scandalous` (via
+[`humane-ruby`](https://github.com/woodie/humane-ruby)) share one
+implementation instead of two drifting copies. `humanSize`'s output is
+unchanged -- `humane.SizeFormatter.Format` is the same rounding
+approach, just moved out of this repo. `timeAgo`'s wording changes
+slightly: no more "about" prefix on the hour bucket (`"15 hours ago"`,
+not `"about 15 hours ago"`), matching Finder/zouk and dropping the one
+place `timeago`'s wording diverged from them. The direction-aware
+behavior from issue #15 (step 5) carries over unchanged --
+`humane.TimeFormatter.Format(t, relativeTo)` takes both times
+explicitly, so `timeAgo` in `main.go` wraps it in a one-line closure
+supplying `time.Now()` as `relativeTo`, matching `listing.html.tmpl`'s
+existing single-argument `{{timeAgo $file.Time}}` call.
+
+`go.mod` drops `justincampbell/timeago` and its indirect
+`justincampbell/bigduration` entirely, adding `github.com/woodie/humane
+v0.1.0` in their place. Made in the sandbox (no Go toolchain -- see
+"Sandbox limitation" above), so `go.mod`/`go.sum` are hand-edited to the
+best approximation; run `go mod tidy` locally to let Go regenerate
+`go.sum` and confirm resolution, then `go test ./...` to confirm the
+updated `main_test.go` fixture (`"15 hours ago"`, no `about`) passes
+against the real module.

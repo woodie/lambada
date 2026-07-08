@@ -4,9 +4,9 @@ go 1.26.3
 
 require (
 	github.com/emersion/go-smtp v0.24.0
-	github.com/justincampbell/timeago v0.0.0-20160528003754-027f40306f1d
 	github.com/onsi/ginkgo/v2 v2.29.0
 	github.com/onsi/gomega v1.41.0
+	github.com/woodie/humane v0.1.0
 )
 
 require (
@@ -16,7 +16,6 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
-	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect

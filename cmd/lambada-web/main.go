@@ -11,13 +11,13 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/justincampbell/timeago"
+	"github.com/woodie/humane"
 )
 
 // scanDir defaults to a relative path so a plain `go build &&
@@ -55,46 +55,37 @@ var templatesFS embed.FS
 //go:embed static/style.css
 var styleCSS []byte
 
-// humanSize matches Finder: 1000-based math, capitalized KB/MB/... labels.
-func humanSize(size int64) string {
-	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
-	if size < 1000 {
-		return fmt.Sprintf("%d B", size)
-	}
-	exp := int(math.Log(float64(size)) / math.Log(1000))
-	if exp >= len(units) {
-		exp = len(units) - 1
-	}
-	rounded := math.Round(float64(size)/math.Pow(1000, float64(exp))*10) / 10
-	if rounded < 10 {
-		return fmt.Sprintf("%.1f %s", rounded, units[exp])
-	}
-	return fmt.Sprintf("%.0f %s", rounded, units[exp])
-}
+// sizeFormatter/timeFormatter back humanSize/timeAgo below -- see
+// github.com/woodie/humane, shared with scandalous's Ruby port.
+var (
+	sizeFormatter = humane.SizeFormatter{}
+	timeFormatter = humane.NewTimeFormatter()
+)
 
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
 // directly from the template -- same shape as listing.erb calling
-// human_size/time_ago_in_words inline. timeAgo uses timeago.FromTime
-// rather than FromDuration: FromTime is direction-aware (renders "in 3
-// minutes" for a future time instead of requiring the caller to
-// normalize the sign with .Abs(), which would collapse future and past
-// into the same "3 minutes ago" text -- see
+// human_size/time_ago_in_words inline. timeAgo wraps
+// timeFormatter.Format, which is direction-aware (renders "3 minutes
+// from now" for a future time instead of requiring the caller to
+// normalize the sign, which would collapse future and past into the
+// same "3 minutes ago" text -- see
 // https://github.com/woodie/lambada/issues/15) and it already appends
-// its own "ago"/"from now" suffix, so the template no longer adds one.
+// its own "ago"/"from now" suffix, so the template doesn't add one.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
-			"humanSize": humanSize,
-			"timeAgo":   timeago.FromTime,
+			"humanSize": sizeFormatter.Format,
+			"timeAgo": func(t time.Time) string {
+				return timeFormatter.Format(t, time.Now())
+			},
 		}).
 		ParseFS(templatesFS, "templates/listing.html.tmpl"),
 )
 
 // listingData is what listing.html.tmpl renders: just the raw scan
-// listing -- timeAgo (timeago.FromTime) reaches for the real clock
-// itself to compute each scan's age, the same way Ruby's
-// time_ago_in_words(from_time) defaults its to_time to Time.now rather
-// than taking it as an argument.
+// listing -- timeAgo reaches for the real clock itself (time.Now()) to
+// compute each scan's age, the same way Ruby's time_ago_in_words(from_time)
+// defaults its to_time to Time.now rather than taking it as an argument.
 type listingData struct {
 	Scans []scan
 }
