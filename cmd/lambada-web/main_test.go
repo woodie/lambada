@@ -71,7 +71,7 @@ var _ = Describe("Lambada WEB", func() {
 				Expect(rec.Body.String()).To(ContainSubstring("7 B"))
 			})
 
-			Context("with files can be older", func() {
+			Context("when files can be older", func() {
 				setFileAge := func(age time.Duration) {
 					when := time.Now().Add(-age)
 					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
@@ -114,27 +114,22 @@ var _ = Describe("Lambada WEB", func() {
 				})
 			})
 
-			It("wires the delete confirm dialog with the full message", func() {
-				rec := get(mux, "/")
-				Expect(rec.Body.String()).To(ContainSubstring("Delete this scan from less than a minute ago?"))
-			})
-
-			// Proves the fix for lambada#15: timeAgo used to compute
-			// now.Sub(t).Abs(), which collapses a future mtime (clock
-			// skew, a malformed server timestamp) into the same "X ago"
-			// text a past file gets. timeago.FromTime is direction-aware,
-			// so a future file reads "from now" instead.
-			Context("with a file from the future", func() {
+			Context("when files can be newer", func() {
 				BeforeEach(func() {
 					when := time.Now().Add(3 * time.Minute)
 					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
 				})
 
-				It("displays a future-relative time instead of 'ago'", func() {
+				It("displays a future", func() {
 					rec := get(mux, "/")
 					Expect(rec.Body.String()).To(ContainSubstring("3 minutes from now"))
 					Expect(rec.Body.String()).NotTo(ContainSubstring("ago"))
 				})
+			})
+
+			It("wires the delete confirm dialog with the full message", func() {
+				rec := get(mux, "/")
+				Expect(rec.Body.String()).To(ContainSubstring("Delete this scan from less than a minute ago?"))
 			})
 		})
 	})
