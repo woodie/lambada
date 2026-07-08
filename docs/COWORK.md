@@ -259,6 +259,28 @@ shouldn't need a comment defending the choice.
    `distance_of_time_in_words(from_time, Time.now).abs`-based, matching
    real Rails behavior, future-mtime handling included) -- untouched
    since nothing prompted revisiting it this session.
+6. Swapped `github.com/dustin/go-humanize`'s `Bytes` for
+   `github.com/c2h5oh/datasize`'s `ByteSize.HumanReadable()`. Trigger:
+   `main_test.go` asserted `"80 kB"` while `scandalous/spec/web_spec.rb`'s
+   equivalent case (same 79992-byte fixture) asserts `"78.1 KB"` --
+   `go-humanize`'s `Bytes` is SI (1000-based, lowercase `kB`), while
+   Rails' `number_to_human_size` is 1024-based but labels it `KB`, not
+   `KiB`. `go-humanize`'s `IBytes` is 1024-based but keeps the IEC
+   `KiB`/`MiB` labels, and its default 2-significant-digit rounding drops
+   the decimal once the integer part hits two digits (`IBytes(79992)` ->
+   `"78 KiB"`, not `"78.1 KiB"`) -- `BytesN`/`IBytesN` can force a third
+   digit back in, but neither exposes swapping the unit strings without
+   hand-rolling the formatter. `datasize.ByteSize.HumanReadable()` does
+   both natively: 1024-based division with `KB`/`MB`/... labels and a
+   fixed one-decimal format, which happens to reproduce
+   `number_to_human_size`'s output exactly for this fixture. Confirmed by
+   arithmetic, not a test run (sandbox limitation, as above): 79992 / 1024
+   = 78 remainder 120, formatted as `"78.1 KB"`. `go.mod`/`go.sum` updated
+   to drop `dustin/go-humanize` and add `c2h5oh/datasize`
+   (`v0.0.0-20231215233829-aa82cc1e6500`, its only published pseudo-version
+   -- the repo has no semver tags); `go.sum`'s hash lines for the new
+   module aren't filled in here since the sandbox can't compute them --
+   run `go mod tidy` before building.
 
 ## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
 

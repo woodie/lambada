@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dustin/go-humanize"
+	"github.com/c2h5oh/datasize"
 	"github.com/justincampbell/timeago"
 )
 
@@ -67,7 +67,7 @@ var styleCSS []byte
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
-			"humanSize": func(size int64) string { return humanize.Bytes(uint64(size)) },
+			"humanSize": func(size int64) string { return datasize.ByteSize(size).HumanReadable() },
 			"timeAgo":   timeago.FromTime,
 		}).
 		ParseFS(templatesFS, "templates/listing.html.tmpl"),

@@ -67,7 +67,7 @@ var _ = Describe("Lambada WEB", func() {
 				rec := get(mux, "/")
 				Expect(rec.Code).To(Equal(http.StatusOK))
 				Expect(rec.Body.String()).To(ContainSubstring("/download/" + file))
-				Expect(rec.Body.String()).To(ContainSubstring("📄 80 kB"))
+				Expect(rec.Body.String()).To(ContainSubstring("📄 78.1 KB"))
 			})
 
 			Context("when files can be older", func() {
