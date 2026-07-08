@@ -296,6 +296,37 @@ shouldn't need a comment defending the choice.
    that library's actual output. Cross-language prose matching isn't a
    goal -- three specs describing three libraries' real behavior is the
    point, not a bug. No code changes made.
+8. Replaced `c2h5oh/datasize` (step 6) with a hand-rolled `humanSize`.
+   Trigger: woodie compared the new `"220.6 KB"` output against a real
+   file's Finder size (`"226 KB"`) and found they didn't match --
+   `datasize` is 1024-based, Finder is 1000-based, and both happen to
+   label the unit `KB`. This means step 6's fix was itself wrong: it
+   matched `scandalous`'s `number_to_human_size` output (`"78.1 KB"`),
+   but that's *also* 1024-based under a `KB` label (`number_to_human_size(1234)
+   # => "1.21 KB"` is Rails' own documented example), so step 6 matched
+   the wrong reference. zouk's `ByteCountFormatter(.file)` -- confirmed
+   1000-based, matching Finder -- was the one implementation that had it
+   right the whole time. No published Go or Ruby library ships
+   1000-based math under capitalized `KB`/`MB` labels: the technically
+   correct-per-SI libraries (`go-humanize`, `docker/go-units`) use
+   1000-based math but lowercase `kB`; the libraries that capitalize it
+   pair it with 1024-based math (`datasize`, `IBytes`'s `KiB`). Rails'
+   `number_to_human_size` dropped its `:prefix` option in Rails 5 and
+   has no built-in way back to 1000-based math (see
+   [rails/rails#40054](https://github.com/rails/rails/issues/40054) --
+   a private-API monkey-patch is possible but wasn't used). Rather than
+   post-process a library's output or monkey-patch Rails internals,
+   `humanSize` in `main.go` is now a small hand-rolled function (no
+   external dependency -- `go.mod`/`go.sum` drop `c2h5oh/datasize`
+   entirely, nothing replaces it), and `scandalous`'s `web.rb` grew the
+   Ruby equivalent (`human_size`, in a `helpers do` block, replacing
+   `number_to_human_size` and the now-unused
+   `ActionView::Helpers::NumberHelper` include). Both round to 2
+   significant digits the same way `go-humanize`'s `Bytes()` always did
+   -- only the base (1000, unchanged) and the label case (`KB`, not
+   `kB`) needed fixing. `main_test.go`'s and `web_spec.rb`'s shared
+   79992-byte fixture assertion goes back to `"80 KB"` -- the original
+   pre-step-6 number was right all along, only the case was wrong.
 
 ## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
 

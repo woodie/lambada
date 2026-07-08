@@ -3,7 +3,6 @@ module lambada
 go 1.26.3
 
 require (
-	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/emersion/go-smtp v0.24.0
 	github.com/justincampbell/timeago v0.0.0-20160528003754-027f40306f1d
 	github.com/onsi/ginkgo/v2 v2.29.0

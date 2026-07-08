@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/c2h5oh/datasize"
 	"github.com/justincampbell/timeago"
 )
 
@@ -55,19 +55,36 @@ var templatesFS embed.FS
 //go:embed static/style.css
 var styleCSS []byte
 
+// humanSize matches Finder: 1000-based math, capitalized KB/MB/... labels.
+func humanSize(size int64) string {
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+	if size < 1000 {
+		return fmt.Sprintf("%d B", size)
+	}
+	exp := int(math.Log(float64(size)) / math.Log(1000))
+	if exp >= len(units) {
+		exp = len(units) - 1
+	}
+	rounded := math.Round(float64(size)/math.Pow(1000, float64(exp))*10) / 10
+	if rounded < 10 {
+		return fmt.Sprintf("%.1f %s", rounded, units[exp])
+	}
+	return fmt.Sprintf("%.0f %s", rounded, units[exp])
+}
+
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
 // directly from the template -- same shape as listing.erb calling
-// number_to_human_size/time_ago_in_words inline. timeAgo uses
-// timeago.FromTime rather than FromDuration: FromTime is direction-aware
-// (renders "in 3 minutes" for a future time instead of requiring the
-// caller to normalize the sign with .Abs(), which would collapse future
-// and past into the same "3 minutes ago" text -- see
+// human_size/time_ago_in_words inline. timeAgo uses timeago.FromTime
+// rather than FromDuration: FromTime is direction-aware (renders "in 3
+// minutes" for a future time instead of requiring the caller to
+// normalize the sign with .Abs(), which would collapse future and past
+// into the same "3 minutes ago" text -- see
 // https://github.com/woodie/lambada/issues/15) and it already appends
 // its own "ago"/"from now" suffix, so the template no longer adds one.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
-			"humanSize": func(size int64) string { return datasize.ByteSize(size).HumanReadable() },
+			"humanSize": humanSize,
 			"timeAgo":   timeago.FromTime,
 		}).
 		ParseFS(templatesFS, "templates/listing.html.tmpl"),
