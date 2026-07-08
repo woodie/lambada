@@ -10,7 +10,7 @@ Now you can serve up scanned documents on your home network.
 
 <img width="193" height="226" alt="printer" src="https://github.com/user-attachments/assets/a1d7f795-6e4b-43ca-91a9-1d915b28fedc" />
 <img width="161" height="117" alt="piv1" src="https://github.com/user-attachments/assets/d4d1104a-7512-4310-a699-df8a36704b9b" /> &nbsp;
-<img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/5c7a480d-249d-4637-ae91-e07db638f35b" />
+<img width="292" height="181" alt="listing" src="https://github.com/user-attachments/assets/e18dca3c-8864-4098-b06d-1e1518e8852e" />
 <br>
 <br>
 A lot of perfectly good scanners and printers end up in a landfill the
