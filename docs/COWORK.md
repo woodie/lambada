@@ -281,6 +281,21 @@ shouldn't need a comment defending the choice.
    -- the repo has no semver tags); `go.sum`'s hash lines for the new
    module aren't filled in here since the sandbox can't compute them --
    run `go mod tidy` before building.
+7. Compared `main_test.go`, `scandalous/spec/web_spec.rb`, and
+   `zouk/Tests/ZoukKitTests/ScanEntrySpec.swift` side by side this
+   session. Two wording gaps turned up: Go/Ruby render `"about 15 hours
+   ago"` for the hour bucket, `RelativeDateTimeFormatter` (no "about"
+   concept) renders plain `"15 hours ago"`; and the future case reads
+   three different ways -- `"3 minutes from now"` (Go), `"in 3 minutes"`
+   (Swift), Ruby's buggy `"3 minutes ago"`. Confirmed intentional, not
+   bugs to converge -- this **supersedes** step 5's "lean toward keeping
+   Go and zouk's Swift implementation similar," which in hindsight read
+   as a wording-parity goal it never actually achieved. The real rule:
+   pick whichever library plugs in with the least resistance (no
+   hand-rolled future/past guard), and let each project's spec document
+   that library's actual output. Cross-language prose matching isn't a
+   goal -- three specs describing three libraries' real behavior is the
+   point, not a bug. No code changes made.
 
 ## This session: nginx in front of lambada-web (issues #5, #6), on a feature branch
 
