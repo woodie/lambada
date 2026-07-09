@@ -49,11 +49,14 @@ func envOr(name, fallback string) string {
 	return fallback
 }
 
-//go:embed templates/listing.html.tmpl
-var templatesFS embed.FS
+//go:embed views/listing.html.tmpl
+var viewsFS embed.FS
 
 //go:embed static/style.css
 var styleCSS []byte
+
+//go:embed static/script.js
+var scriptJS []byte
 
 // sizeFormatter/timeFormatter back humanSize/timeAgo below -- see
 // github.com/woodie/humane, shared with scandalous's Ruby port.
@@ -79,7 +82,7 @@ var listingTemplate = template.Must(
 				return timeFormatter.Format(t, time.Now())
 			},
 		}).
-		ParseFS(templatesFS, "templates/listing.html.tmpl"),
+		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
 
 // listingData is what listing.html.tmpl renders: just the raw scan
@@ -87,7 +90,7 @@ var listingTemplate = template.Must(
 // compute each scan's age, the same way Ruby's time_ago_in_words(from_time)
 // defaults its to_time to Time.now rather than taking it as an argument.
 type listingData struct {
-	Scans []scan
+	Listing []scan
 }
 
 // handleIndex is registered under the "GET /{$}" pattern, which (unlike a
@@ -102,7 +105,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	data := listingData{Scans: scans}
+	data := listingData{Listing: scans}
 	if err := listingTemplate.Execute(w, data); err != nil {
 		log.Printf("template error: %v", err)
 	}
@@ -111,6 +114,11 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 func handleStyle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	_, _ = w.Write(styleCSS)
+}
+
+func handleScript(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	_, _ = w.Write(scriptJS)
 }
 
 func handleScansJSON(w http.ResponseWriter, r *http.Request) {
@@ -198,6 +206,7 @@ func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", handleIndex)
 	mux.HandleFunc("GET /style.css", handleStyle)
+	mux.HandleFunc("GET /script.js", handleScript)
 	mux.HandleFunc("GET /files.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
 	mux.HandleFunc("DELETE /download/{filename}", handleDelete)

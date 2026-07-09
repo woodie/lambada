@@ -218,4 +218,13 @@ var _ = Describe("Lambada WEB", func() {
 			Expect(rec.Body.String()).To(ContainSubstring("font-family"))
 		})
 	})
+
+	Describe("GET /script.js", func() {
+		It("serves the embedded script", func() {
+			rec := get(mux, "/script.js")
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Header().Get("Content-Type")).To(ContainSubstring("javascript"))
+			Expect(rec.Body.String()).To(ContainSubstring("function deleteFile"))
+		})
+	})
 })
