@@ -1,0 +1,25 @@
+{
+  "name": "lambada",
+  "private": true,
+  "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/ginkgo)",
+  "scripts": {
+    "lint-js": "standard",
+    "test-js": "vitest run",
+    "lint-go": "golangci-lint run",
+    "test-go": "ginkgo-fd -r",
+    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LAMBADA_QUIET=1 ginkgo -r"
+  },
+  "devDependencies": {
+    "sinon": "^19.0.2",
+    "standard": "^17.1.2",
+    "vitest": "^2.1.9"
+  },
+  "standard": {
+    "env": [
+      "browser"
+    ],
+    "globals": [
+      "context"
+    ]
+  }
+}

@@ -41,3 +41,7 @@ go.work.sum
 
 # env file
 .env
+
+# JS lint/test tooling (public/script.js's package.json)
+node_modules
+package-lock.json
