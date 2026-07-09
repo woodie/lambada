@@ -9,12 +9,24 @@ import (
 	"io"
 	"log"
 	"net/mail"
+	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
 )
 
 var listenAddr = "0.0.0.0:2525"
+
+// LAMBADA_QUIET silences all logging (log.Printf/Fatalf) when set to any
+// non-empty value -- both binaries honor it the same way. Useful for
+// keeping `ginkgo -r`'s output focused on pass/fail dots rather than every
+// handler's log lines (see `check` in package.json), without editing every
+// log call individually.
+func init() {
+	if os.Getenv("LAMBADA_QUIET") != "" {
+		log.SetOutput(io.Discard)
+	}
+}
 
 type Backend struct{}
 

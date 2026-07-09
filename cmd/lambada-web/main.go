@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -38,6 +39,17 @@ var (
 	scanDir    = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
 )
+
+// LAMBADA_QUIET silences all logging (log.Printf/Fatalf) when set to any
+// non-empty value -- both binaries honor it the same way. Useful for
+// keeping `ginkgo -r`'s output focused on pass/fail dots rather than every
+// handler's log lines (see `check` in package.json), without editing every
+// log call individually.
+func init() {
+	if os.Getenv("LAMBADA_QUIET") != "" {
+		log.SetOutput(io.Discard)
+	}
+}
 
 // envOr returns the value of the named environment variable, or fallback
 // if it's unset or empty. The one and only knob lambada-web exposes outside
