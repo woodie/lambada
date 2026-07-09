@@ -540,3 +540,28 @@ ago"` fixture. Also fixed a leftover non-English `It` description
 (`"displays a future"` -> `"displays 3 minutes from now"`) to match
 `scandalous`'s equivalent spec wording. Tagged and released as `2.2.0`
 (`docs/releases/2.2.0.md`), pushed to GitHub.
+
+## This session: bumped `humane` to v0.2.0 (future wording change)
+
+Revisited step 7's "not a bug, three specs describing three libraries'
+real behavior" conclusion above -- that reasoning predated `humane`
+existing at all (it was about the raw pre-extraction libraries:
+`justincampbell/timeago`, Rails' buggy `time_ago_in_words`, and
+`RelativeDateTimeFormatter`). Once `humane` was extracted specifically to
+*model* `RelativeDateTimeFormatter`, shipping wording that knowingly
+diverged from what that API actually outputs (symmetric `"X from now"`
+vs. the real `"in X"`) undercut the library's own stated premise. Fixed
+upstream in `humane` `v0.2.0` -- see `humane`'s own `docs/COWORK.md` for
+the full reasoning -- and propagated here: `go.mod` bumped to
+`github.com/woodie/humane v0.2.0`, `main.go`'s doc comment on
+`listingTemplate` updated to say `"in 3 minutes"` instead of `"3 minutes
+from now"`, and `main_test.go`'s "when files can be newer" case updated
+to match. `humane-ruby`/`scandalous` got the same treatment in parallel.
+
+Made in the sandbox (no Go toolchain -- see "Sandbox limitation" above)
+and **not yet confirmed on real hardware** -- `go.mod` was hand-edited to
+`v0.2.0` before that tag was pushed to GitHub, so `go mod tidy` will need
+to actually fetch it once `humane`'s `v0.2.0` tag is pushed and `go.sum`
+regenerated. Tag/push order matters here: push `humane`'s `v0.2.0` tag
+before running `go mod tidy`/`go test ./...` on this repo, or `go mod
+tidy` will fail to resolve the new version.

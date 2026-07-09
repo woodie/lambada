@@ -119,9 +119,9 @@ var _ = Describe("Lambada WEB", func() {
 					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
 				})
 
-				It("displays 3 minutes from now", func() {
+				It("displays in 3 minutes", func() {
 					rec := get(mux, "/")
-					Expect(rec.Body.String()).To(ContainSubstring("3 minutes from now"))
+					Expect(rec.Body.String()).To(ContainSubstring("in 3 minutes"))
 					Expect(rec.Body.String()).NotTo(ContainSubstring("ago"))
 				})
 			})

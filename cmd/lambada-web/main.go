@@ -65,12 +65,12 @@ var (
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
 // directly from the template -- same shape as listing.erb calling
 // human_size/time_ago_in_words inline. timeAgo wraps
-// timeFormatter.Format, which is direction-aware (renders "3 minutes
-// from now" for a future time instead of requiring the caller to
-// normalize the sign, which would collapse future and past into the
-// same "3 minutes ago" text -- see
-// https://github.com/woodie/lambada/issues/15) and it already appends
-// its own "ago"/"from now" suffix, so the template doesn't add one.
+// timeFormatter.Format, which is direction-aware (renders "in 3 minutes"
+// for a future time instead of requiring the caller to normalize the
+// sign, which would collapse future and past into the same "3 minutes
+// ago" text -- see https://github.com/woodie/lambada/issues/15) and it
+// already appends its own "ago"/"in " affix, so the template doesn't add
+// one.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
