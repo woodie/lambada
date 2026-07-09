@@ -565,3 +565,80 @@ to actually fetch it once `humane`'s `v0.2.0` tag is pushed and `go.sum`
 regenerated. Tag/push order matters here: push `humane`'s `v0.2.0` tag
 before running `go mod tidy`/`go test ./...` on this repo, or `go mod
 tidy` will fail to resolve the new version.
+
+## This session: JS linting/testing, golangci-lint, `LAMBADA_QUIET`, v2.4.0
+
+`scandalous` got a JS lint/test setup first (`standard` + `vitest` for its
+`public/script.js`), then woodie asked for the same structure in `lambada`.
+`cmd/lambada-web/templates/listing.html.tmpl` turned out to have the exact
+same `deleteFile` confirm/fetch/DELETE logic inline (a Go port artifact --
+semicolons, no `standard` style yet, unlike scandalous's already-extracted
+copy). Extracted it to `cmd/lambada-web/static/script.js`, embedded via a
+new `//go:embed static/script.js` var + `handleScript` + `GET /script.js`
+route (mirroring `handleStyle`/`style.css`), with a Ginkgo test for the new
+route in `main_test.go`.
+
+Two more renames piggybacked on the same session, both internal-only
+(neither touches `/files.json`'s wire format, which is a separate
+`toScansJSON` struct): `cmd/lambada-web/templates/` moved to `views/`
+(matching scandalous's `views/` naming), and `listingData`'s `Scans` field
+is now `Listing`.
+
+JS tooling: `standard` (zero-config) + `vitest` + `sinon`.
+`spec/javascript/script.spec.js` exercises `deleteFile` via Node's `vm`
+module rather than jsdom -- jsdom's `window.location.reload` turned out to
+be non-configurable and unstubbable with sinon, and since `script.js` only
+ever touches `confirm`/`fetch`/`location`/`alert` (no real DOM), a bare
+`vm.createContext` sandbox is both sufficient and one less dependency.
+`spec/javascript/setup.js` aliases `context = describe` to match the
+RSpec-style `describe`/`context`/`it` hierarchy documented in the
+account-wide `docs/COWORK.md`.
+
+`golangci-lint` was added too -- this repo's first Go linter ever, default
+linter set, no `.golangci.yml` -- wired into a brand-new
+`.github/workflows/ci.yml` (`lambada` had no CI at all before this
+session) alongside the JS job.
+
+`package.json` gained `lint-js`/`test-js`/`lint-go`/`test-go` plus a
+`check` script running all four in sequence, stopping at the first
+failure. `check` uses compact output (`vitest run --reporter=dot`, plain
+`ginkgo -r` instead of `ginkgo-fd -r`'s documentation-style verbosity) so
+running everything together stays readable -- except `ginkgo -r` was still
+drowning its own dots in every handler's `log.Printf` output (woodie
+pasted a real run showing this). Fixed with `LAMBADA_QUIET`: both
+binaries' `init()` now check it and redirect the `log` package's output to
+`io.Discard` when set to any non-empty value. Not a production knob --
+`check` sets `LAMBADA_QUIET=1` only for its own `ginkgo -r` step;
+standalone `npm run test-go` (`ginkgo-fd -r`) runs without it, so full
+logging is still there when actually debugging a suite.
+
+Verification: `standard`/`vitest` confirmed directly in the sandbox (all 9
+`script.spec.js` cases passing). `golangci-lint`/`ginkgo` can't run in the
+sandbox -- no Go toolchain, and no network access to install
+`golangci-lint` (`gem install`/`go install`-style fetches are blocked the
+same way `humane`'s v0.2.0 tag fetch was, above) -- so all Go-side changes
+were made by inspection only, per the usual caveat. **Confirmed on real
+hardware this session** regardless: woodie pasted `npm run check` output
+twice, first showing the log-noise problem, then (post-`LAMBADA_QUIET`) a
+clean run -- `golangci-lint run` "0 issues", `ginkgo -r` "Lambada MTA Suite
+- 21/21 specs" and "Lambada Web Suite - 24/24 specs", both PASS.
+
+Tagged `2.4.0` (`docs/releases/2.4.0.md`), six commits (script
+extraction+rename, `LAMBADA_QUIET`, JS tooling, CI, docs, release notes).
+Not pushed from the sandbox -- confirmed no SSH key or agent for
+`git@github.com` is available there (`ssh -T git@github.com` fails DNS
+resolution directly; `git ls-remote origin` fails host key verification
+even routed through the sandbox's proxy) -- woodie pushes `main` plus the
+`2.4.0` tag from their Mac. The same setup was mirrored into `scandalous`
+in parallel this session (also tagged `2.4.0`); scandalous doesn't keep a
+`docs/COWORK.md`, so nothing about it is recorded there beyond its own
+commit history.
+
+One git gotcha worth remembering: scandalous's `DEVELOPMENT.md` ->
+`docs/DEVELOPMENT.md` move (done by woodie locally, before this session)
+was already sitting *staged* in git's index, not just modified in the
+working tree. Committing a specific, unrelated set of files with `git add
+<paths>` doesn't exclude an already-staged file from the same commit --
+`git commit` includes everything currently in the index. Worth checking
+`git status` for pre-existing staged changes before assuming a targeted
+`git add`/`git commit` pair will produce the commit you expect.
