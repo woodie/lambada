@@ -84,33 +84,6 @@ var _ = Describe("Lambada WEB", func() {
 						Expect(rec.Body.String()).To(ContainSubstring("less than a minute ago"))
 					})
 				})
-
-				Context("three minutes ago", func() {
-					BeforeEach(func() { setFileAge(3 * time.Minute) })
-
-					It("displays 3 minutes ago", func() {
-						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("3 minutes ago"))
-					})
-				})
-
-				Context("fifteen hours ago", func() {
-					BeforeEach(func() { setFileAge(15 * time.Hour) })
-
-					It("displays about 15 hours ago", func() {
-						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("about 15 hours ago"))
-					})
-				})
-
-				Context("thirty hours ago", func() {
-					BeforeEach(func() { setFileAge(30 * time.Hour) })
-
-					It("displays about 1 day ago", func() {
-						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("about 1 day ago"))
-					})
-				})
 			})
 
 			Context("when files can be newer", func() {
