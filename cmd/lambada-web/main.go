@@ -74,7 +74,7 @@ var scriptJS []byte
 // github.com/woodie/humane, shared with scandalous's Ruby port.
 var (
 	sizeFormatter = humane.SizeFormatter{}
-	timeFormatter = humane.NewTimeFormatter()
+	timeFormatter = humane.TimeFormatter{Approximate: true}
 )
 
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo

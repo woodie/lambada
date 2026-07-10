@@ -97,18 +97,18 @@ var _ = Describe("Lambada WEB", func() {
 				Context("fifteen hours ago", func() {
 					BeforeEach(func() { setFileAge(15 * time.Hour) })
 
-					It("displays 15 hours ago", func() {
+					It("displays about 15 hours ago", func() {
 						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("15 hours ago"))
+						Expect(rec.Body.String()).To(ContainSubstring("about 15 hours ago"))
 					})
 				})
 
 				Context("thirty hours ago", func() {
 					BeforeEach(func() { setFileAge(30 * time.Hour) })
 
-					It("displays 1 day ago", func() {
+					It("displays about 1 day ago", func() {
 						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("1 day ago"))
+						Expect(rec.Body.String()).To(ContainSubstring("about 1 day ago"))
 					})
 				})
 			})

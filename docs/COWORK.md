@@ -664,3 +664,28 @@ documented above. `go.sum` deliberately left untouched -- hand-computing
 its checksums isn't safe to fake; needs a real `go get`/`go mod tidy` run
 to regenerate correctly. Made in the sandbox (no Go toolchain); not yet
 confirmed on real hardware.
+
+## This session: bumped `humane` to v0.4.0, opted into `Approximate`
+
+`humane`'s `v0.4.0` adds `TimeFormatter.Approximate` (prefixes "about"/"in
+about" onto buckets of an hour or larger -- see `humane/docs/releases/v0.4.0.md`).
+Unlike the `v0.3.0` bump, this one *does* need a source change: `main.go`'s
+module-level `timeFormatter` var changed from `humane.NewTimeFormatter()` to
+`humane.TimeFormatter{Approximate: true}` (still `IncludeSeconds: false` via
+the zero value, so that behavior is unchanged -- only `Approximate` is new).
+
+This listing page is a static server render with no live refresh -- the
+same case `scandalous`'s `time_ago` opted into `approximate: true` for, and
+the whole reason the option exists. `main_test.go`'s "fifteen hours ago"/
+"thirty hours ago" contexts updated to expect `"about 15 hours ago"`/
+`"about 1 day ago"`; everything under an hour (`"3 minutes ago"`, `"less
+than a minute ago"`, `"in 3 minutes"`) is untouched, since `Approximate`
+only touches hour-plus buckets.
+
+`go.mod`'s `github.com/woodie/humane` requirement bumped `v0.3.0` -> `v0.4.0`,
+hand-edited the same way prior bumps were. `go.sum` deliberately left
+untouched again -- needs a real `go get`/`go mod tidy` run. Made in the
+sandbox (no Go toolchain); not yet confirmed on real hardware. `humane`'s
+own `v0.4.0` is committed locally but not yet tagged/released as of this
+writing -- confirm that first (see `humane/docs/COWORK.md` "Next up"),
+then `go get github.com/woodie/humane@v0.4.0` here.
