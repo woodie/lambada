@@ -642,3 +642,25 @@ working tree. Committing a specific, unrelated set of files with `git add
 `git commit` includes everything currently in the index. Worth checking
 `git status` for pre-existing staged changes before assuming a targeted
 `git add`/`git commit` pair will produce the commit you expect.
+
+## This session: bumped `humane` to v0.3.0 (`CollapseMinute` -> `IncludeSeconds`)
+
+Unlike the `v0.2.0` bump above, this one needed zero source changes here.
+`main.go` only ever calls `humane.NewTimeFormatter()` and
+`humane.SizeFormatter{}` -- no `CollapseMinute`/`IncludeSeconds` field is
+ever set explicitly -- so the rename's polarity inversion doesn't touch this
+repo's behavior at all, and `main_test.go` already asserted the `v0.2.0`
+asymmetric wording (`"in 3 minutes"`), so there was nothing stale to update
+there either. `scandalous` came out the same way in parallel -- see its own
+commit history (no `docs/COWORK.md` there).
+
+Only change: `go.mod`'s `github.com/woodie/humane` requirement bumped
+`v0.2.0` -> `v0.3.0`, hand-edited the same way the `v0.2.0` bump was.
+Different situation this time though -- `humane`'s `v0.3.0` tag is already
+pushed and released (unlike last time, where the tag didn't exist yet), so
+`go mod tidy`/`go get github.com/woodie/humane@v0.3.0` should resolve
+cleanly on the first try rather than needing the tag/push-order dance
+documented above. `go.sum` deliberately left untouched -- hand-computing
+its checksums isn't safe to fake; needs a real `go get`/`go mod tidy` run
+to regenerate correctly. Made in the sandbox (no Go toolchain); not yet
+confirmed on real hardware.
