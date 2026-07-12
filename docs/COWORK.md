@@ -716,7 +716,11 @@ needed updating there.
 ([release](https://github.com/woodie/humane/releases/tag/v0.9.0)) -- the
 temporary `replace github.com/woodie/humane => ../humane` directive is
 removed from `go.mod`; the `require` line's existing `v0.9.0` now resolves
-to the real published module. Run `go mod tidy` to regenerate `go.sum`,
-then a real `go build`/`go vet ./...`/`make check` pass on woodie's Mac
-before this is released as the next `lambada` version and deployed to the
-Pi.
+to the real published module. Confirmed for real via `go mod tidy` (pulled
+the real published module) + `npm run check` on woodie's Mac -- JS lint,
+9/9 JS tests, `golangci-lint` (0 issues), and both Ginkgo suites (42/42)
+all green. Tagged, pushed, and released as `lambada` `2.7.0`:
+https://github.com/woodie/lambada/releases/tag/2.7.0. Deployed to the Pi
+via `git pull` + `go mod tidy` + `make install` + `systemctl restart` --
+confirmed live against a real file (`"226 KB"`, `"1 minute ago"` on the
+listing page).
