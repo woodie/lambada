@@ -13,6 +13,7 @@ li {
 	padding: 6px;
 	display: flex;
     justify-content: left;
+    align-items: baseline;
 }
 li span {
 	padding: 0 20px;
