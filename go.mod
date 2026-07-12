@@ -6,7 +6,7 @@ require (
 	github.com/emersion/go-smtp v0.24.0
 	github.com/onsi/ginkgo/v2 v2.29.0
 	github.com/onsi/gomega v1.41.0
-	github.com/woodie/humane v0.5.0
+	github.com/woodie/humane v0.9.0
 )
 
 require (

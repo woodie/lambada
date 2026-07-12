@@ -70,28 +70,22 @@ var styleCSS []byte
 //go:embed static/script.js
 var scriptJS []byte
 
-// sizeFormatter/timeFormatter back humanSize/timeAgo below -- see
-// github.com/woodie/humane, shared with scandalous's Ruby port.
-var (
-	sizeFormatter = humane.SizeFormatter{}
-	timeFormatter = humane.TimeFormatter{Approximate: true}
-)
-
 // listingTemplate renders listing.html.tmpl, calling humanSize/timeAgo
 // directly from the template -- same shape as listing.erb calling
-// human_size/time_ago_in_words inline. timeAgo wraps
-// timeFormatter.Format, which is direction-aware (renders "in 3 minutes"
-// for a future time instead of requiring the caller to normalize the
-// sign, which would collapse future and past into the same "3 minutes
-// ago" text -- see https://github.com/woodie/lambada/issues/15) and it
-// already appends its own "ago"/"in " affix, so the template doesn't add
-// one.
+// human_size/time_ago_in_words inline. humane.TimeAgo defaults to
+// Approximate: true (matching ActionView's own always-on-past-the-hour
+// behavior, see github.com/woodie/humane v0.9.0), and is direction-aware
+// (renders "in 3 minutes" for a future time instead of requiring the
+// caller to normalize the sign, which would collapse future and past into
+// the same "3 minutes ago" text -- see
+// https://github.com/woodie/lambada/issues/15); it already appends its own
+// "ago"/"in " affix, so the template doesn't add one.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
-			"humanSize": sizeFormatter.Format,
+			"humanSize": humane.HumanSize,
 			"timeAgo": func(t time.Time) string {
-				return timeFormatter.Format(t, time.Now())
+				return humane.TimeAgo(&t, time.Now())
 			},
 		}).
 		ParseFS(viewsFS, "views/listing.html.tmpl"),

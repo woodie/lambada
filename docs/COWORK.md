@@ -689,3 +689,34 @@ sandbox (no Go toolchain); not yet confirmed on real hardware. `humane`'s
 own `v0.4.0` is committed locally but not yet tagged/released as of this
 writing -- confirm that first (see `humane/docs/COWORK.md` "Next up"),
 then `go get github.com/woodie/humane@v0.4.0` here.
+
+## This session: adopting `humane` v0.9.0's full API rethink
+
+`humane` dropped its instantiated-formatter shape entirely in `v0.9.0` --
+`humane.SizeFormatter{}`/`humane.TimeFormatter{Approximate: true}` and
+their `.Format` methods are gone, replaced by package-level `humane.HumanSize`/
+`humane.TimeAgo` functions (see `humane/docs/COWORK.md`'s own `v0.9.0` entry
+for the full cross-repo rationale). `main.go`'s module-level `sizeFormatter`/
+`timeFormatter` vars are gone with them -- there was no per-instance state to
+hold once configuration moved to a per-call argument, so the vars were
+ceremony this rewrite no longer needs. `listingTemplate`'s `FuncMap` now
+references `humane.HumanSize` directly and wraps `humane.TimeAgo(&t,
+time.Now())` inline.
+
+`humane.TimeAgo`'s `Approximate` now defaults to `true` (was `false`,
+requiring the explicit `TimeFormatter{Approximate: true}` this file used to
+set) -- matches what this app already opted into, so the rendered listing is
+unchanged. `main_test.go`'s existing assertions (`"less than a minute ago"`,
+`"in 3 minutes"`, the `"80 KB"` fixture) all stay under the hour-scale
+`Approximate` boundary or are otherwise untouched by the rounding-rule
+correction in `HumanSize` (see `humane`'s `docs/COMMENTS.md`), so nothing
+needed updating there.
+
+`humane` `v0.9.0` is tagged, pushed, and released
+([release](https://github.com/woodie/humane/releases/tag/v0.9.0)) -- the
+temporary `replace github.com/woodie/humane => ../humane` directive is
+removed from `go.mod`; the `require` line's existing `v0.9.0` now resolves
+to the real published module. Run `go mod tidy` to regenerate `go.sum`,
+then a real `go build`/`go vet ./...`/`make check` pass on woodie's Mac
+before this is released as the next `lambada` version and deployed to the
+Pi.
