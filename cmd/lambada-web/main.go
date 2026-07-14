@@ -79,13 +79,16 @@ var scriptJS []byte
 // caller to normalize the sign, which would collapse future and past into
 // the same "3 minutes ago" text -- see
 // https://github.com/woodie/lambada/issues/15); it already appends its own
-// "ago"/"in " affix, so the template doesn't add one.
+// "ago"/"in " affix, so the template doesn't add one. As of humane v0.9.3,
+// TimeAgo is a one-argument convenience supplying time.Now() internally --
+// see humane's own docs/COWORK.md v0.9.3 entry -- so this closure only
+// exists to take the address of the template's by-value time.Time.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
 			"humanSize": humane.HumanSize,
 			"timeAgo": func(t time.Time) string {
-				return humane.TimeAgo(&t, time.Now())
+				return humane.TimeAgo(&t)
 			},
 		}).
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
