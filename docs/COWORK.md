@@ -724,3 +724,23 @@ https://github.com/woodie/lambada/releases/tag/2.7.0. Deployed to the Pi
 via `git pull` + `go mod tidy` + `make install` + `systemctl restart` --
 confirmed live against a real file (`"226 KB"`, `"1 minute ago"` on the
 listing page).
+
+## This session: adopted `humane` v0.9.3 (`TimeAgo` is now one-argument)
+
+`humane` `v0.9.3` renames the old two-argument `TimeAgo` to `DistanceInTime`
+and adds a new one-argument `TimeAgo(at, opts...)` supplying `time.Now()`
+internally -- see `humane`'s own `docs/COWORK.md` `v0.9.3` entry. This is
+exactly the shape `listingTemplate`'s `timeAgo` FuncMap closure was already
+hand-rolling (`return humane.TimeAgo(&t, time.Now())`), so the fix is a
+one-line simplification: `return humane.TimeAgo(&t)`. The closure itself
+stays -- still needed to take the address of the template's by-value
+`time.Time` -- just drops the now-redundant `time.Now()` argument.
+
+`go.mod` bumped `v0.9.0` -> `v0.9.3` via a real `go get
+github.com/woodie/humane@v0.9.3` + `go mod tidy` on woodie's Mac (this
+session's edit only hand-touched the version string in the sandbox, per
+usual). Confirmed for real via `npm run check` -- JS lint clean, 9/9 JS
+tests, `golangci-lint` 0 issues, both Ginkgo suites green (MTA 21/21, Web
+21/21). Not yet tagged/released as `lambada`, and not yet deployed to the
+Pi -- woodie was away from home this session, so the Pi side is a
+deliberately separate follow-up once back on the same network.
