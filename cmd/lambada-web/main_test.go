@@ -13,8 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// get performs an in-process GET against newMux() without binding a real
-// listener -- mirrors how the Ruby suite uses Rack::Test against WebApp.
+// get performs an in-process GET against newMux() without binding a real listener.
 func get(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, path, nil)
 	rec := httptest.NewRecorder()
@@ -22,8 +21,7 @@ func get(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// del performs an in-process DELETE against newMux() without binding a
-// real listener. Named del, not delete, so it doesn't shadow the builtin.
+// del performs an in-process DELETE against newMux(); named del, not delete, to avoid shadowing the builtin.
 func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodDelete, path, nil)
 	rec := httptest.NewRecorder()
@@ -31,8 +29,7 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// Lambada WEB -- the HTTP routes and the page/JSON they serve (the
-// scanfiles.go/server.go "work" they call into has its own test files).
+// Lambada WEB exercises the HTTP routes (scanfiles.go/server.go have their own test files).
 var _ = Describe("Lambada WEB", func() {
 	var (
 		mux  *http.ServeMux
@@ -125,9 +122,7 @@ var _ = Describe("Lambada WEB", func() {
 		})
 	})
 
-	// The RESTful DELETE counterpart to GET /download/{filename} -- same
-	// resource path, different verb, rather than a separate
-	// "/delete/{filename}" route. See handleDelete in main.go.
+	// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
 	Describe("DELETE /download/{filename}", func() {
 		Context("when the file is missing", func() {
 			It("responds with 404", func() {
@@ -166,9 +161,7 @@ var _ = Describe("Lambada WEB", func() {
 			})
 		})
 
-		// The exact JSON shape (name/size/time/path) is unit-tested directly
-		// against toScansJSON in scanfiles_test.go -- this just checks the
-		// route is wired up to it.
+		// The exact JSON shape is unit-tested in scanfiles_test.go; this just checks the route is wired up.
 		Context("with a file", func() {
 			BeforeEach(writeFile)
 

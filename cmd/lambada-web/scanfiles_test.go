@@ -9,10 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// ScanFiles mirrors scandalous's lib/scan_files.rb -- listing/toScansJSON
-// are the Go port of ScanFiles#listing/#scans_json, kept in their own
-// file/test file (scanfiles.go/scanfiles_test.go) the same way the Ruby
-// version keeps ScanFiles out of web.rb.
+// ScanFiles exercises listing/toScansJSON, the Go port of Ruby's ScanFiles#listing/#scans_json.
 var _ = Describe("ScanFiles", func() {
 	Describe("listing", func() {
 		var dir string

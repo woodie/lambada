@@ -1,8 +1,4 @@
-// Command lambada-mta is a tiny open-relay SMTP server: any mail sent to
-// it gets its attachments saved to disk by attachments.go and is otherwise
-// discarded. It is the Go port of scandalous's mta.rb, split the same way:
-// the "work" lives in attachments.go, and this file is just the SMTP
-// wiring (mta.rb's MidiSmtpServer subclass).
+// Command lambada-mta is a tiny open-relay SMTP server that saves attachments to disk.
 package main
 
 import (
@@ -17,11 +13,7 @@ import (
 
 var listenAddr = "0.0.0.0:2525"
 
-// LAMBADA_QUIET silences all logging (log.Printf/Fatalf) when set to any
-// non-empty value -- both binaries honor it the same way. Useful for
-// keeping `ginkgo -r`'s output focused on pass/fail dots rather than every
-// handler's log lines (see `check` in package.json), without editing every
-// log call individually.
+// LAMBADA_QUIET, if set, silences all logging (see package.json's check script).
 func init() {
 	if os.Getenv("LAMBADA_QUIET") != "" {
 		log.SetOutput(io.Discard)

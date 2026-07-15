@@ -5,8 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// Server mirrors server.go -- newServer is the constructor these tests
-// guard, including the issue #2 regression check.
+// Server exercises newServer, the constructor server.go defines.
 var _ = Describe("Server", func() {
 	Describe("newServer", func() {
 		It("sets the address and handler", func() {
@@ -16,13 +15,7 @@ var _ = Describe("Server", func() {
 			Expect(srv.Handler).To(BeIdenticalTo(mux))
 		})
 
-		// Regression test for https://github.com/woodie/lambada/issues/2: a
-		// zero-value http.Server (what the old http.ListenAndServe(addr,
-		// handler) helper built) leaves every timeout at 0, i.e. "never" --
-		// the suspected cause of leaked keep-alive connections piling up
-		// until new clients couldn't connect at all (see server.go). This
-		// just has to fail loudly if a future edit accidentally drops back
-		// to a zero-value server.
+		// Regression test for issue #2: guards against newServer reverting to a zero-value (all-timeouts-0) http.Server.
 		It("sets every timeout to a nonzero value", func() {
 			srv := newServer("0.0.0.0:9090", newMux())
 			Expect(srv.ReadHeaderTimeout).To(BeNumerically(">", 0))

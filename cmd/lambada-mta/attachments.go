@@ -1,9 +1,4 @@
-// Attachments -- parses incoming mail, saves attachments to disk, and
-// cleans up old ones. Go port of scandalous's lib/scan_files.rb (the
-// cleanup/detach side of ScanFiles) plus the MIME parsing mta.rb gets for
-// free from the mail gem -- kept in its own file/test file the same way:
-// main.go's SMTP Backend/Session call into this, but nothing here knows
-// about net/smtp.
+// Attachments parses incoming mail, saves attachments to disk, and cleans up old ones.
 package main
 
 import (
@@ -20,24 +15,13 @@ import (
 	"time"
 )
 
-// attachmentDir is where attachments get saved, and maxFileAge is how long
-// cleanupOldFiles lets them sit before deleting them. Go port of
-// scandalous's ScanFiles::SCAN_FOLDER / ScanFiles::ONE_DAY_AGO.
-//
-// attachmentDir defaults to a relative path so a plain `go build &&
-// ./lambada-mta` from a checkout just works with no setup. Under systemd,
-// LAMBADA_ATTACHMENTS_DIR overrides it to the shared production location
-// (/srv/lambada/attachments -- see service/lambada-mta.service and
-// docs/DEVELOPMENT.md's Configuration section). lambada-web honors the same
-// variable for the same directory, since both binaries have to agree on it.
+// attachmentDir and maxFileAge are overridden via LAMBADA_ATTACHMENTS_DIR; lambada-web must agree on the same directory.
 var (
 	attachmentDir = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	maxFileAge    = 24 * time.Hour
 )
 
-// envOr returns the value of the named environment variable, or fallback if
-// it's unset or empty. Same helper as lambada-web's -- duplicated rather
-// than shared, since the two binaries don't have a common internal package.
+// envOr returns the named environment variable, or fallback if unset/empty.
 func envOr(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {
 		return v
