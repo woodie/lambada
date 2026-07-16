@@ -15,8 +15,8 @@ type scan struct {
 	Size int64
 }
 
-// listing returns every *.pdf file in dir, newest filename first (epoch filenames sort lexicographically).
-func listing(dir string) ([]scan, error) {
+// scanFilesListing returns every *.pdf file in dir, newest filename first (epoch filenames sort lexicographically).
+func scanFilesListing(dir string) ([]scan, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.pdf"))
 	if err != nil {
 		return nil, err

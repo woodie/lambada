@@ -20,9 +20,7 @@ import (
 
 // silence logging for `npm run check`
 func init() {
-	if os.Getenv("LAMBADA_QUIET") != "" {
-		log.SetOutput(io.Discard)
-	}
+	if os.Getenv("LAMBADA_QUIET") != "" { log.SetOutput(io.Discard) }
 }
 
 var (
@@ -31,9 +29,7 @@ var (
 )
 
 func envOr(name, fallback string) string {
-	if v := os.Getenv(name); v != "" {
-		return v
-	}
+	if v := os.Getenv(name); v != "" { return v }
 	return fallback
 }
 
@@ -58,7 +54,7 @@ var listingTemplate = template.Must(
 
 // shared by the index and files.json routes: fetch the scan listing or fail the request
 func scanListingOrFail(w http.ResponseWriter) ([]scan, bool) {
-	scans, err := listing(scanDir)
+	scans, err := scanFilesListing(scanDir)
 	if err != nil {
 		log.Printf("listing error: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -134,11 +130,10 @@ func newMux() *http.ServeMux {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Route to serve static files
+	// Catch-all pattern to fetch static content
 	mux.Handle("GET /", func() http.Handler {
 		static, err := fs.Sub(staticFS, "static")
 		if err != nil {

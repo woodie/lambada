@@ -9,9 +9,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// ScanFiles exercises listing/toScansJSON, the Go port of Ruby's ScanFiles#listing/#scans_json.
+// ScanFiles exercises scanFilesListing/toScansJSON, the Go port of Ruby's ScanFiles#listing/#scans_json.
 var _ = Describe("ScanFiles", func() {
-	Describe("listing", func() {
+	Describe("scanFilesListing", func() {
 		var dir string
 
 		BeforeEach(func() {
@@ -19,7 +19,7 @@ var _ = Describe("ScanFiles", func() {
 		})
 
 		It("returns an empty slice for an empty directory", func() {
-			scans, err := listing(dir)
+			scans, err := scanFilesListing(dir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scans).To(BeEmpty())
 		})
@@ -28,7 +28,7 @@ var _ = Describe("ScanFiles", func() {
 			Expect(os.WriteFile(filepath.Join(dir, "1234567890.pdf"), []byte("content"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignore me"), 0o644)).To(Succeed())
 
-			scans, err := listing(dir)
+			scans, err := scanFilesListing(dir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scans).To(HaveLen(1))
 			Expect(scans[0].Name).To(Equal("1234567890.pdf"))
@@ -39,7 +39,7 @@ var _ = Describe("ScanFiles", func() {
 			Expect(os.WriteFile(filepath.Join(dir, "1000000000.pdf"), []byte("a"), 0o644)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(dir, "2000000000.pdf"), []byte("b"), 0o644)).To(Succeed())
 
-			scans, err := listing(dir)
+			scans, err := scanFilesListing(dir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scans).To(HaveLen(2))
 			Expect(scans[0].Name).To(Equal("2000000000.pdf"))
