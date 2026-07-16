@@ -823,3 +823,61 @@ tests, `golangci-lint` 0 issues, both Ginkgo suites green (MTA 21/21, Web
 21/21). Not yet tagged/released as `lambada`, and not yet deployed to the
 Pi -- woodie was away from home this session, so the Pi side is a
 deliberately separate follow-up once back on the same network.
+
+## This session: three CI fixes (golangci-lint-action, duplicate workflows, vitest ERESOLVE)
+
+woodie reported a real failing GitHub Actions run
+(https://github.com/woodie/lambada/actions) and this session worked
+through it one failure at a time as each fix uncovered the next.
+
+**`golangci-lint` couldn't load its config.** `can't load config: the Go
+language version (go1.24) used to build golangci-lint is lower than the
+targeted Go version (1.26.3)`. `ci.yml`'s `golangci-lint` job pinned
+`golangci/golangci-lint-action@v6` with `version: latest` -- but `v6` only
+resolves the latest golangci-lint **v1.x** release, a line that's stopped
+tracking new Go versions and was last built with go1.24. Bumped the
+action to `@v9` (`v7+` targets golangci-lint v2, whose releases track
+current Go) -- `version: latest` unchanged. Confirmed by reading
+`golangci-lint-action`'s own README (`Compatibility` section) rather than
+on real hardware, since golangci-lint itself can't run in the sandbox (no
+Go toolchain, per "Sandbox limitation" above).
+
+**Two workflows fired on every push.** `.github/workflows/go.yml` -- a
+leftover GitHub-scaffolded "Go" template (`actions/checkout@v4` +
+`actions/setup-go@v4` with a hardcoded `go-version: '1.26.3'`, then `go
+build`/`go test ./...`) -- triggered on the same `push`/`pull_request`
+(`main`) events as `ci.yml`, so every push kicked off two separate
+workflow runs. Not a pure duplicate, though: `ci.yml` only ran
+`golangci-lint` + the JS checks and never actually built or tested the Go
+code -- `go.yml` was the only place `go test ./...` (which runs the
+Ginkgo suites via the stdlib test runner, no `ginkgo` CLI needed) actually
+happened in CI. Folded it into `ci.yml` as a new `go-test` job, matching
+the `golangci-lint` job's `actions/checkout@v5` + `actions/setup-go@v5`
+(`go-version-file: go.mod`) pattern instead of `go.yml`'s stale pinned
+versions, then deleted `go.yml`. `README.md`'s CI badge (pointed at the
+now-deleted `go.yml`) updated to `ci.yml` as a follow-up woodie caught
+separately. One workflow file now, one run per push/PR, same lint/build/
+test/JS coverage as before.
+
+**`npm install` hit `ERESOLVE` on a fresh CI run.** `html-validate@11.5.6`
+carries an *optional* peerDependency on `vitest ^3.0.0 || ^4.0.1` (for a
+Vitest/Jest matcher neither repo uses), while `package.json` pinned
+`vitest ^2.1.9`. Neither `lambada` nor `scandalous` commits a
+`package-lock.json` (see the `javascript` job's comment: "no
+package-lock.json committed, so npm ci isn't available"), so every CI run
+does a fresh, unconstrained `npm install` -- and once vitest 2.x lands in
+the tree, npm's resolver flags it as conflicting with that peer, even
+though the peer is optional. Bumped `vitest` to `^4.1.10` (latest stable;
+`5.0.0` is still beta) in both repos. Unlike the Go-side fixes above, this
+one **was** confirmed directly in the sandbox -- Node/npm is available
+here even without a Go toolchain: clean `npm install`, 9/9
+`script.spec.js` tests passing, `standard` lint clean, in both `lambada`
+and `scandalous`. `scandalous` doesn't keep its own `docs/COWORK.md`
+(per the note above), so this is the record of that side of the fix too.
+
+All four fixes committed locally to `lambada`'s `main` (golangci-lint-action
+bump, vitest bump, workflow consolidation, badge fix -- 4 commits ahead of
+`origin/main` as of this writing) and to `scandalous`'s `main` (vitest bump
+only, 1 commit ahead). Not pushed from the sandbox, per the usual "Pushing"
+rule in the account-wide `docs/COWORK.md` -- woodie pushes both from his
+Mac.
