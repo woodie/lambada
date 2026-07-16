@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Available Scans</title>
   <link rel="stylesheet" href="style.css">
@@ -12,8 +12,8 @@
     <ul>
       {{range $file := .Listing}}
         <li>
-          <button type="button" class="delete" onclick="deleteFile('{{$file.Name}}',
-          '{{printf "Delete this scan from %s?" (timeAgo $file.Time)}}')">🗑️</button>
+          <button type="button" class="delete" onclick='deleteFile("{{$file.Name}}",
+          "{{printf "Delete this scan from %s?" (timeAgo $file.Time)}}")'>🗑️</button>
           <a href="/download/{{$file.Name}}">📄 {{humanSize $file.Size}}</a>
           <span>{{timeAgo $file.Time}}</span>
         </li>

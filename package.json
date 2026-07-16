@@ -7,9 +7,11 @@
     "test-js": "vitest run",
     "lint-go": "golangci-lint run",
     "test-go": "ginkgo-fd -r",
-    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LAMBADA_QUIET=1 ginkgo -r"
+    "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
+    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LAMBADA_QUIET=1 ginkgo -r && npm run lint-html"
   },
   "devDependencies": {
+    "html-validate": "^11.5.6",
     "sinon": "^19.0.2",
     "standard": "^17.1.2",
     "vitest": "^2.1.9"
