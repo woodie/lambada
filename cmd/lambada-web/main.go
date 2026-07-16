@@ -47,7 +47,7 @@ var styleCSS []byte
 //go:embed static/script.js
 var scriptJS []byte
 
-// listingTemplate renders listing.html.tmpl, exposing humanSize/timeAgo (humane.HumanSize/TimeAgo) to the template.
+// renders listing.html.tmpl, exposing timeAgo humanSize.
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
@@ -64,7 +64,7 @@ type listingData struct {
 	Listing []scan
 }
 
-// handleIndex serves the scan listing at the exact root path (registered as "GET /{$}", not "GET /").
+// The scan listing at the exact root path (registered as "GET /{$}", not "GET /").
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	scans, err := listing(scanDir)
 	if err != nil {
