@@ -93,9 +93,7 @@ func scanFilePath(w http.ResponseWriter, filename string) (path string, ok bool)
 // GET / ... list all available files
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	scans, ok := scanListingOrFail(w)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := listingTemplate.Execute(w, listingData{Listing: scans}); err != nil {
@@ -106,9 +104,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 // GET /files.json ... list of files (for zouk client)
 func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 	scans, ok := scanListingOrFail(w)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(toScansJSON(scans)); err != nil {
@@ -119,9 +115,7 @@ func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 // GET /download/:filename
 func handleDownload(w http.ResponseWriter, r *http.Request) {
 	path, ok := scanFilePath(w, r.PathValue("filename"))
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
 	http.ServeFile(w, r, path)
@@ -130,9 +124,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 // DELETE /download/:filename
 func handleDelete(w http.ResponseWriter, r *http.Request) {
 	path, ok := scanFilePath(w, r.PathValue("filename"))
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	if err := os.Remove(path); err != nil {
 		log.Printf("delete error: %v", err)

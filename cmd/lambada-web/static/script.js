@@ -1,4 +1,3 @@
-// Called from an inline onclick in views/listing.html.tmpl, not from this file.
 // eslint-disable-next-line no-unused-vars
 function deleteFile (name, confirmMessage) {
   if (!confirm(confirmMessage)) return
