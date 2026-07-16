@@ -24,6 +24,20 @@ jobs:
       with:
         version: latest
 
+  go-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+    - name: Build
+      run: go build -v ./...
+    - name: Test
+      run: go test -v ./...
+
   javascript:
 
     runs-on: ubuntu-latest
