@@ -154,6 +154,55 @@ need a framework to do that; it needs ordinary function extraction. See
 `docs/COWORK.md`'s "html-validate, then closing out issue #17" entry for
 the full before/after.
 
+## Closing the gap further: inline route closures instead of named handlers
+
+A later session pushed the same de-duplication principle one step further,
+prompted by comparing `main.go` directly against `web.rb` line for line:
+`web.rb`'s `get "/" do ... end` blocks put a route's logic right at its
+declaration, with a one-line comment above each (`# Route to list all
+available files`) -- `main.go`'s named handler functions
+(`handleIndex`/`handleScansJSON`/`handleDownload`/`handleDelete`), by
+contrast, separated a route's *registration* (in `newMux()`) from its
+*logic* (the function body, defined elsewhere in the file), which is
+exactly the indirection Sinatra's block syntax avoids.
+
+`handleIndex`/`handleScansJSON`/`handleDownload`/`handleDelete` are gone
+now. Each one is an anonymous `func(w http.ResponseWriter, r *http.Request)
+{...}` literal passed directly to `mux.HandleFunc`/`mux.Handle` inside
+`newMux()`, with the same one-line `// Route to ...` comment `web.rb` uses
+above each block. `scanListingOrFail` and `scanFilePath` (the shared logic
+extracted in the fix above) are untouched -- this only collapses the thin
+per-route glue, not the real work. Confirmed safe by inspection and then
+`npm run check`: `main_test.go` only ever exercises routes through
+`newMux()`, never by the handler functions' names, so nothing to update
+there.
+
+One follow-up closed a specific readability gap `web.rb`'s `DELETE` route
+has that the Go version initially didn't: `web.rb`'s delete route shows
+both outcomes explicitly (`status 204` / `status 404`) in an `if/else`
+right there in the block. Go's `DELETE` closure only showed
+`w.WriteHeader(http.StatusNoContent)` -- the 404 path was invisible at the
+call site, hidden inside `scanFilePath`, which writes it internally rather
+than returning it to the caller. Reverting that (having each handler write
+its own `writeFileNotFound(w)`) was rejected -- it's exactly the duplication
+`docs/COWORK.md`'s "html-validate, then closing out issue #17" entry
+deliberately removed. Instead `scanFilePath` was renamed
+`scanFilePathOr404`, mirroring `scanListingOrFail`'s existing
+"OrFail"-style naming: the literal status code is now visible at every call
+site through the function name alone, with no added lines and no
+duplicated filename-resolution logic between `GET`/`DELETE`.
+
+The one route that doesn't fit the "anonymous func per request" shape
+cleanly is the static-file route: `mux.Handle` takes an `http.Handler`
+value, not a `func(w, r)`, and `fs.Sub(staticFS, "static")` only needs to
+run once, not per request. It's registered as an immediately-invoked
+`func() http.Handler { ... }()` literal instead, so the one-time setup
+still lives at the route's own registration site rather than being hoisted
+above the other four routes (its original position, and the position that
+prompted this whole thread) -- `newMux()` now reads top-to-bottom as five
+self-contained route blocks, matching `web.rb`'s shape as closely as Go's
+type system allows.
+
 ## The open idea: `bolero`, a helper library rather than a framework
 
 `lambada` being "absurdly simple" is an advantage here, not just a

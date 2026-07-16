@@ -91,11 +91,6 @@ func scanFilePathOr404(w http.ResponseWriter, filename string) (path string, ok 
 }
 
 func newMux() *http.ServeMux {
-	static, err := fs.Sub(staticFS, "static")
-	if err != nil {
-		log.Fatalf("static assets: %v", err)
-	}
-
 	mux := http.NewServeMux()
 
 	// Route to list all available files
@@ -143,7 +138,15 @@ func newMux() *http.ServeMux {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	mux.Handle("GET /", http.FileServerFS(static))
+	// Route to serve static files
+	mux.Handle("GET /", func() http.Handler {
+		static, err := fs.Sub(staticFS, "static")
+		if err != nil {
+			log.Fatalf("static assets: %v", err)
+		}
+		return http.FileServerFS(static)
+	}())
+
 	return mux
 }
 
