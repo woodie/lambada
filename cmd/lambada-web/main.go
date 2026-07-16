@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -36,23 +37,12 @@ func envOr(name, fallback string) string {
 	return fallback
 }
 
-// defend against path traversal
-func sanitizeFilename(raw string) (string, bool) {
-	name := filepath.Base(raw)
-	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
-		return "", false
-	}
-	return name, true
-}
-
 type listingData struct { Listing []scan }
 
 //go:embed views/listing.html.tmpl
 var viewsFS embed.FS
-//go:embed static/style.css
-var styleCSS []byte
-//go:embed static/script.js
-var scriptJS []byte
+//go:embed static
+var staticFS embed.FS
 
 // render listing.html.tmpl exposing timeAgo and humanSize
 var listingTemplate = template.Must(
@@ -66,40 +56,57 @@ var listingTemplate = template.Must(
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
 
-// GET /style.css
-func handleStyle(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	_, _ = w.Write(styleCSS)
-}
-
-// GET /script.js
-func handleScript(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	_, _ = w.Write(scriptJS)
-}
-
-// GET / ... list all available files
-func handleIndex(w http.ResponseWriter, r *http.Request) {
+// shared by handleIndex/handleScansJSON: fetch the scan listing or fail the request
+func scanListingOrFail(w http.ResponseWriter) ([]scan, bool) {
 	scans, err := listing(scanDir)
 	if err != nil {
 		log.Printf("listing error: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return nil, false
+	}
+	return scans, true
+}
+
+func writeFileNotFound(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write([]byte("File not found"))
+}
+
+// Resolve filename to a path within scanDir, writing the 404 response on error
+func scanFilePath(w http.ResponseWriter, filename string) (path string, ok bool) {
+	name := filepath.Base(filename)
+	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
+		writeFileNotFound(w)
+		return "", false
+	}
+
+	path = filepath.Join(scanDir, name)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		writeFileNotFound(w)
+		return "", false
+	}
+
+	return path, true
+}
+
+// GET / ... list all available files
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	scans, ok := scanListingOrFail(w)
+	if !ok {
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	data := listingData{Listing: scans}
-	if err := listingTemplate.Execute(w, data); err != nil {
+	if err := listingTemplate.Execute(w, listingData{Listing: scans}); err != nil {
 		log.Printf("template error: %v", err)
 	}
 }
 
 // GET /files.json ... list of files (for zouk client)
 func handleScansJSON(w http.ResponseWriter, r *http.Request) {
-	scans, err := listing(scanDir)
-	if err != nil {
-		log.Printf("listing error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	scans, ok := scanListingOrFail(w)
+	if !ok {
 		return
 	}
 
@@ -111,37 +118,19 @@ func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 
 // GET /download/:filename
 func handleDownload(w http.ResponseWriter, r *http.Request) {
-	name, ok := sanitizeFilename(r.PathValue("filename"))
+	path, ok := scanFilePath(w, r.PathValue("filename"))
 	if !ok {
-		http.NotFound(w, r)
 		return
 	}
 
-	path := filepath.Join(scanDir, name)
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("File not found"))
-		return
-	}
-
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, name))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
 	http.ServeFile(w, r, path)
 }
 
 // DELETE /download/:filename
 func handleDelete(w http.ResponseWriter, r *http.Request) {
-	name, ok := sanitizeFilename(r.PathValue("filename"))
+	path, ok := scanFilePath(w, r.PathValue("filename"))
 	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-
-	path := filepath.Join(scanDir, name)
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("File not found"))
 		return
 	}
 
@@ -155,13 +144,17 @@ func handleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func newMux() *http.ServeMux {
+	static, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		log.Fatalf("static assets: %v", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", handleIndex)
 	mux.HandleFunc("GET /files.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
 	mux.HandleFunc("DELETE /download/{filename}", handleDelete)
-	mux.HandleFunc("GET /style.css", handleStyle)
-	mux.HandleFunc("GET /script.js", handleScript)
+	mux.Handle("GET /", http.FileServerFS(static))
 	return mux
 }
 

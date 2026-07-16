@@ -725,6 +725,85 @@ via `git pull` + `go mod tidy` + `make install` + `systemctl restart` --
 confirmed live against a real file (`"226 KB"`, `"1 minute ago"` on the
 listing page).
 
+## This session: html-validate, then closing out issue #17 without a new framework
+
+Two threads, same session:
+
+**HTML fragment linting.** `scandalous` and `lambada` both wanted a way to
+lint/check their HTML views. `herb` (the HTML+ERB toolchain) was the
+starting point, but it only understands Ruby's `<% %>` delimiters, not
+Go's `{{ }}` -- so it can't parse `views/listing.html.tmpl` at all. Since
+one consistent tool across both repos mattered more than ERB-specific
+smarts, both repos got `html-validate` (offline, npm, explicit
+fragment/incomplete-template support) instead: `npm run lint-html`,
+folded into `check`. Along the way, both templates turned out to share
+the same latent bug: the delete button's `onclick` attribute nested a
+double-quoted interpolated string inside a double-quoted HTML attribute,
+which breaks a template-agnostic parser's raw-source quote counting (it
+has no `{{ }}`/`<% %>` awareness). Fixed in both by swapping the outer
+attribute to single quotes -- Go's `html/template` was never actually
+confused by the original quoting (it lexes `{{ }}` actions before any
+HTML tokenization), but the linter needed it regardless. Also added the
+missing `lang="en"` on `<html>` in both.
+
+**Issue #17 ("Static helper for Go web").** woodie's ask went further than
+the issue itself: use Sinatra (`scandalous/web.rb`) as the model for "push
+work into testable libraries, keep route handlers thin," and see whether
+Go needs a whole Sinatra/Flask-style framework to get there, or whether
+stdlib plus ordinary refactoring already does it.
+
+Two stdlib/Go-idiom fixes closed most of the actual boilerplate, no new
+framework or even a local helper needed:
+
+- `http.FileServerFS` (stdlib, Go 1.22+ -- this repo is on 1.26.3) replaces
+  `handleStyle`/`handleScript` entirely. `//go:embed static/style.css` +
+  `//go:embed static/script.js` + two handlers became one `//go:embed
+  static` + `mux.Handle("GET /", http.FileServerFS(sub))` -- the same
+  "static files just work" behavior Sinatra gives `scandalous/public/` for
+  free, achieved with zero new dependencies. Confirmed `"GET /{$}"` (exact
+  root, already used for the index) and `"GET /"` (everything else) don't
+  conflict -- Go's route-precedence rules are built for exactly this
+  combination.
+- Deduped two blocks of copy-pasted glue that had nothing to do with
+  routing sugar: `handleIndex`/`handleScansJSON` had an identical
+  five-line "fetch the listing or 500" block (extracted to
+  `scanListingOrFail`, which takes `w` and writes the 500 itself on
+  failure, so callers just do `if !ok { return }`), and
+  `handleDownload`/`handleDelete` had an identical "sanitize the filename,
+  stat the file, 404 if missing" block (extracted to `scanFilePath`).
+  `scanFilePath` went through two shapes in the same session: first as a
+  pure `string -> (string, bool)` function with callers each repeating
+  `writeFileNotFound(w)` themselves, then folded that call inside
+  `scanFilePath` (taking `w` directly) once woodie pointed out the
+  repeated call -- now it matches `scanListingOrFail`'s shape exactly,
+  and both pairs of handlers reduce to the identical `if !ok { return }`
+  after the helper call. (`sanitizeFilename` was also inlined directly
+  into `scanFilePath` per woodie's request, since it had exactly one
+  caller left after the dedup.) One deliberate, called-out behavior
+  tweak: the two failure modes (bad filename vs. missing file) used to
+  produce two different 404 bodies (`http.NotFound`'s default page vs. a
+  hand-written "File not found") -- now both go through `writeFileNotFound`
+  for one consistent body. `main_test.go` only ever asserted status codes
+  for these paths, not body text, so nothing broke.
+
+Net: `handleStyle`/`handleScript` gone, ~24 lines of duplicated glue gone,
+zero new dependencies, zero new abstraction layer. Made by inspection
+first (no Go toolchain in the sandbox), then **confirmed on real
+hardware**: woodie ran `npm run check` -- JS lint clean, 9/9 JS tests,
+`golangci-lint` 0 issues, both Ginkgo suites green (MTA 21/21, Web
+21/21), and the new `lint-html` step clean too.
+
+Whether a real, published Sinatra/Flask-style Go framework is still worth
+building is an open question, being discussed live rather than decided
+this session -- worth a look at whatever `docs/COWORK.md` entry (if any)
+follows this one for how it landed. The two fixes above account for
+everything concretely wrong in `main.go` today; what's left (a `Render`
+helper for the one template call, a `JSON` helper for the one JSON route,
+route-declaration sugar) is thinner than what motivated a framework in
+the first place, and issue #6/#17 already established this account's
+default posture on building generic-sounding abstractions ahead of a
+second real consumer.
+
 ## This session: adopted `humane` v0.9.3 (`TimeAgo` is now one-argument)
 
 `humane` `v0.9.3` renames the old two-argument `TimeAgo` to `DistanceInTime`
