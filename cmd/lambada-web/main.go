@@ -1,4 +1,4 @@
-// Command lambada-web serves a listing of scans plus a JSON API for the zouk Mac client.
+// Command lambada-web serves a listing of scans plus a JSON API for zouk
 package main
 
 import (
@@ -17,20 +17,18 @@ import (
 	"github.com/woodie/humane"
 )
 
-// scanDir and listenAddr are overridden via LAMBADA_ATTACHMENTS_DIR and LAMBADA_WEB_LISTEN_ADDR; see docs/DEVELOPMENT.md.
-var (
-	scanDir    = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
-	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
-)
-
-// LAMBADA_QUIET, if set, silences all logging (see package.json's check script).
+// silence logging for `npm run check`
 func init() {
 	if os.Getenv("LAMBADA_QUIET") != "" {
 		log.SetOutput(io.Discard)
 	}
 }
 
-// envOr returns the named environment variable, or fallback if unset/empty.
+var (
+	scanDir    = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
+	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
+)
+
 func envOr(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {
 		return v
@@ -38,16 +36,25 @@ func envOr(name, fallback string) string {
 	return fallback
 }
 
+// defend against path traversal
+func sanitizeFilename(raw string) (string, bool) {
+	name := filepath.Base(raw)
+	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
+		return "", false
+	}
+	return name, true
+}
+
+type listingData struct { Listing []scan }
+
 //go:embed views/listing.html.tmpl
 var viewsFS embed.FS
-
 //go:embed static/style.css
 var styleCSS []byte
-
 //go:embed static/script.js
 var scriptJS []byte
 
-// renders listing.html.tmpl, exposing timeAgo humanSize.
+// render listing.html.tmpl exposing timeAgo and humanSize
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
@@ -59,12 +66,19 @@ var listingTemplate = template.Must(
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
 
-// listingData is what listing.html.tmpl renders.
-type listingData struct {
-	Listing []scan
+// GET /style.css
+func handleStyle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	_, _ = w.Write(styleCSS)
 }
 
-// The scan listing at the exact root path (registered as "GET /{$}", not "GET /").
+// GET /script.js
+func handleScript(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	_, _ = w.Write(scriptJS)
+}
+
+// GET / ... list all available files
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	scans, err := listing(scanDir)
 	if err != nil {
@@ -80,16 +94,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleStyle(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	_, _ = w.Write(styleCSS)
-}
-
-func handleScript(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	_, _ = w.Write(scriptJS)
-}
-
+// GET /files.json ... list of files (for zouk client)
 func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 	scans, err := listing(scanDir)
 	if err != nil {
@@ -104,16 +109,7 @@ func handleScansJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// sanitizeFilename defends against path traversal; ServeMux already blocks "..", this is a second layer.
-func sanitizeFilename(raw string) (string, bool) {
-	name := filepath.Base(raw)
-	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
-		return "", false
-	}
-	return name, true
-}
-
-// handleDownload serves a single file out of scanDir.
+// GET /download/:filename
 func handleDownload(w http.ResponseWriter, r *http.Request) {
 	name, ok := sanitizeFilename(r.PathValue("filename"))
 	if !ok {
@@ -133,7 +129,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// handleDelete is the DELETE counterpart to handleDownload, on the same "/download/{filename}" route.
+// DELETE /download/:filename
 func handleDelete(w http.ResponseWriter, r *http.Request) {
 	name, ok := sanitizeFilename(r.PathValue("filename"))
 	if !ok {
@@ -161,11 +157,11 @@ func handleDelete(w http.ResponseWriter, r *http.Request) {
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", handleIndex)
-	mux.HandleFunc("GET /style.css", handleStyle)
-	mux.HandleFunc("GET /script.js", handleScript)
 	mux.HandleFunc("GET /files.json", handleScansJSON)
 	mux.HandleFunc("GET /download/{filename}", handleDownload)
 	mux.HandleFunc("DELETE /download/{filename}", handleDelete)
+	mux.HandleFunc("GET /style.css", handleStyle)
+	mux.HandleFunc("GET /script.js", handleScript)
 	return mux
 }
 
