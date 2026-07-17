@@ -39,14 +39,12 @@ var viewsFS embed.FS
 //go:embed static
 var staticFS embed.FS
 
-// render listing.html.tmpl exposing timeAgo and humanSize
+// render listing.html.tmpl with timeAgo and humanSize
 var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
 			"humanSize": humane.HumanSize,
-			"timeAgo": func(t time.Time) string {
-				return humane.TimeAgo(&t)
-			},
+			"timeAgo": func(t time.Time) string { return humane.TimeAgo(&t) },
 		}).
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
