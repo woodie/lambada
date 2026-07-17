@@ -5,19 +5,18 @@ import (
 	"io"
 	"log"
 	"net/mail"
-	"os"
 	"time"
+
+	"lambada/loglevel"
 
 	"github.com/emersion/go-smtp"
 )
 
 var listenAddr = "0.0.0.0:2525"
 
-// LAMBADA_QUIET, if set, silences all logging (see package.json's check script).
+// LOG_LEVEL=OFF silences all logging (see package.json's check script).
 func init() {
-	if os.Getenv("LAMBADA_QUIET") != "" {
-		log.SetOutput(io.Discard)
-	}
+	loglevel.Apply()
 }
 
 type Backend struct{}

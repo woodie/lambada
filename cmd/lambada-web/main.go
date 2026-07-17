@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -14,23 +13,21 @@ import (
 	"path/filepath"
 	"time"
 
+	"lambada/internal/envutil"
+	"lambada/loglevel"
+
 	"github.com/woodie/humane"
 )
 
 // silence logging for `npm run check`
 func init() {
-	if os.Getenv("LAMBADA_QUIET") != "" { log.SetOutput(io.Discard) }
+	loglevel.Apply()
 }
 
 var (
-	scanDir    = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
-	listenAddr = envOr("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
+	scanDir    = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
+	listenAddr = envutil.Or("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
 )
-
-func envOr(name, fallback string) string {
-	if v := os.Getenv(name); v != "" { return v }
-	return fallback
-}
 
 type listingData struct { Listing []scan }
 
@@ -54,8 +51,12 @@ func newMux() *http.ServeMux {
 
 	// Route to list all available files
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		scans, ok := scanFilesListingOrFail(w)
-		if !ok { return }
+		scans, err := scanFilesListing(scanDir)
+		if err != nil {
+			log.Printf("listing error: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
+			return
+		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := listingTemplate.Execute(w, listingData{Listing: scans}); err != nil {
@@ -65,8 +66,12 @@ func newMux() *http.ServeMux {
 
 	// Route to JSON list of files (for zouk client)
 	mux.HandleFunc("GET /files.json", func(w http.ResponseWriter, r *http.Request) {
-		scans, ok := scanFilesListingOrFail(w)
-		if !ok { return }
+		scans, err := scanFilesListing(scanDir)
+		if err != nil {
+			log.Printf("listing error: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(toScansJSON(scans)); err != nil {
@@ -78,7 +83,7 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("GET /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		path, ok := scanFilesPath(r.PathValue("filename"))
 		if !ok {
-			http.Error(w, "File not found", http.StatusNotFound)
+			http.Error(w, "File not found", http.StatusNotFound) // 404
 			return
 		}
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
@@ -89,16 +94,16 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("DELETE /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		path, ok := scanFilesPath(r.PathValue("filename"))
 		if !ok {
-			http.Error(w, "File not found", http.StatusNotFound)
+			http.Error(w, "File not found", http.StatusNotFound) // 404
 			return
 		}
 
 		if err := os.Remove(path); err != nil {
 			log.Printf("delete error: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
 			return
 		}
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent) // 204
 	})
 
 	// Catch-all pattern to fetch static content

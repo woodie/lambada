@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,21 +14,15 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"lambada/internal/envutil"
 )
 
 // attachmentDir and maxFileAge are overridden via LAMBADA_ATTACHMENTS_DIR; lambada-web must agree on the same directory.
 var (
-	attachmentDir = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
+	attachmentDir = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	maxFileAge    = 24 * time.Hour
 )
-
-// envOr returns the named environment variable, or fallback if unset/empty.
-func envOr(name, fallback string) string {
-	if v := os.Getenv(name); v != "" {
-		return v
-	}
-	return fallback
-}
 
 func processAttachments(msg *mail.Message) error {
 	log.Println("Receiving message")
@@ -46,7 +41,7 @@ func processAttachments(msg *mail.Message) error {
 	mr := multipart.NewReader(msg.Body, params["boundary"])
 	for {
 		part, err := mr.NextPart()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

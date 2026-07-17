@@ -9,7 +9,7 @@
     "lint-go": "golangci-lint run",
     "test-go": "ginkgo-fd -r",
     "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
-    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LAMBADA_QUIET=1 ginkgo -r && npm run lint-html"
+    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LOG_LEVEL=OFF ginkgo -r && npm run lint-html"
   },
   "devDependencies": {
     "html-validate": "^11.5.6",

@@ -2,11 +2,10 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -34,22 +33,11 @@ func scanFilesPath(filename string) (path string, ok bool) {
 	return path, true
 }
 
-// shared by the index and files.json routes: fetch the scan listing or fail the request
-func scanFilesListingOrFail(w http.ResponseWriter) ([]scan, bool) {
-	scans, err := scanFilesListing(scanDir)
-	if err != nil {
-		log.Printf("listing error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return nil, false
-	}
-	return scans, true
-}
-
 // scanFilesListing returns every *.pdf file in dir, newest filename first (epoch filenames sort lexicographically).
 func scanFilesListing(dir string) ([]scan, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.pdf"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("glob %s: %w", dir, err)
 	}
 
 	scans := make([]scan, 0, len(matches))
@@ -66,7 +54,7 @@ func scanFilesListing(dir string) ([]scan, error) {
 		})
 	}
 
-	sort.Slice(scans, func(i, j int) bool { return scans[i].Name > scans[j].Name })
+	slices.SortFunc(scans, func(a, b scan) int { return strings.Compare(b.Name, a.Name) })
 	return scans, nil
 }
 
