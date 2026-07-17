@@ -2,9 +2,12 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -13,6 +16,41 @@ type scan struct {
 	Name string
 	Time time.Time
 	Size int64
+}
+
+// Response when file not found
+func fileNotFound(w http.ResponseWriter) {
+  w.WriteHeader(http.StatusNotFound)
+  _, _ = w.Write([]byte("File not found"))
+}
+
+// Resolve filename to a path within scanDir, writing 404 on error
+func scanFilesPathOr404(w http.ResponseWriter, filename string) (path string, ok bool) {
+  name := filepath.Base(filename)
+  if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
+    fileNotFound(w)
+    return "", false
+  }
+
+  path = filepath.Join(scanDir, name)
+  info, err := os.Stat(path)
+  if err != nil || info.IsDir() {
+    fileNotFound(w)
+    return "", false
+  }
+
+  return path, true
+}
+
+// shared by the index and files.json routes: fetch the scan listing or fail the request
+func scanFilesListingOrFail(w http.ResponseWriter) ([]scan, bool) {
+  scans, err := scanFilesListing(scanDir)
+  if err != nil {
+    log.Printf("listing error: %v", err)
+    http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+    return nil, false
+  }
+  return scans, true
 }
 
 // scanFilesListing returns every *.pdf file in dir, newest filename first (epoch filenames sort lexicographically).

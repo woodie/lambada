@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/woodie/humane"
@@ -52,46 +51,12 @@ var listingTemplate = template.Must(
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
 
-// shared by the index and files.json routes: fetch the scan listing or fail the request
-func scanListingOrFail(w http.ResponseWriter) ([]scan, bool) {
-	scans, err := scanFilesListing(scanDir)
-	if err != nil {
-		log.Printf("listing error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return nil, false
-	}
-	return scans, true
-}
-
-func writeFileNotFound(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotFound)
-	_, _ = w.Write([]byte("File not found"))
-}
-
-// Resolve filename to a path within scanDir, writing 404 on error
-func scanFilePathOr404(w http.ResponseWriter, filename string) (path string, ok bool) {
-	name := filepath.Base(filename)
-	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
-		writeFileNotFound(w)
-		return "", false
-	}
-
-	path = filepath.Join(scanDir, name)
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
-		writeFileNotFound(w)
-		return "", false
-	}
-
-	return path, true
-}
-
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Route to list all available files
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		scans, ok := scanListingOrFail(w)
+		scans, ok := scanFilesListingOrFail(w)
 		if !ok { return }
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -102,7 +67,7 @@ func newMux() *http.ServeMux {
 
 	// Route to JSON list of files (for zouk client)
 	mux.HandleFunc("GET /files.json", func(w http.ResponseWriter, r *http.Request) {
-		scans, ok := scanListingOrFail(w)
+		scans, ok := scanFilesListingOrFail(w)
 		if !ok { return }
 
 		w.Header().Set("Content-Type", "application/json")
@@ -113,7 +78,7 @@ func newMux() *http.ServeMux {
 
 	// Route to download a specific file
 	mux.HandleFunc("GET /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilePathOr404(w, r.PathValue("filename"))
+		path, ok := scanFilesPathOr404(w, r.PathValue("filename"))
 		if !ok { return }
 
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
@@ -122,7 +87,7 @@ func newMux() *http.ServeMux {
 
 	// Route to delete a specific file
 	mux.HandleFunc("DELETE /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilePathOr404(w, r.PathValue("filename"))
+		path, ok := scanFilesPathOr404(w, r.PathValue("filename"))
 		if !ok { return }
 
 		if err := os.Remove(path); err != nil {
