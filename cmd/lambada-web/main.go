@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"lambada/internal/envutil"
 	"lambada/loglevel"
@@ -36,7 +35,7 @@ var listingTemplate = template.Must(
 	template.New("listing.html.tmpl").
 		Funcs(template.FuncMap{
 			"humanSize": humane.HumanSize,
-			"timeAgo": func(t time.Time) string { return humane.TimeAgo(&t) },
+			"timeAgo":   humane.TimeAgo,
 		}).
 		ParseFS(viewsFS, "views/listing.html.tmpl"),
 )
