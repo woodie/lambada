@@ -76,17 +76,22 @@ func newMux() *http.ServeMux {
 
 	// Route to download a specific file
 	mux.HandleFunc("GET /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilesPathOr404(w, r.PathValue("filename"))
-		if !ok { return }
-
+		path, ok := scanFilesPath(r.PathValue("filename"))
+		if !ok {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
 		http.ServeFile(w, r, path)
 	})
 
 	// Route to delete a specific file
 	mux.HandleFunc("DELETE /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilesPathOr404(w, r.PathValue("filename"))
-		if !ok { return }
+		path, ok := scanFilesPath(r.PathValue("filename"))
+		if !ok {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
 
 		if err := os.Remove(path); err != nil {
 			log.Printf("delete error: %v", err)
