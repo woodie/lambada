@@ -19,11 +19,6 @@ import (
 	"github.com/woodie/humane"
 )
 
-// silence logging for `npm run check`
-func init() {
-	loglevel.Apply()
-}
-
 var (
 	scanDir    = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	listenAddr = envutil.Or("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
@@ -116,6 +111,11 @@ func newMux() *http.ServeMux {
 	}())
 
 	return mux
+}
+
+// LOG_LEVEL=OFF silences logging
+func init() {
+	loglevel.Apply()
 }
 
 func main() {

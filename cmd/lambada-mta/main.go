@@ -14,11 +14,6 @@ import (
 
 var listenAddr = "0.0.0.0:2525"
 
-// LOG_LEVEL=OFF silences all logging (see package.json's check script).
-func init() {
-	loglevel.Apply()
-}
-
 type Backend struct{}
 
 func (b *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
@@ -43,6 +38,11 @@ func (s *Session) Data(r io.Reader) error {
 	}
 	cleanupOldFiles()
 	return processAttachments(msg)
+}
+
+// LOG_LEVEL=OFF silences all logging (see package.json's check script).
+func init() {
+	loglevel.Apply()
 }
 
 func main() {
