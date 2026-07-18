@@ -47,7 +47,7 @@ func TestLambadaWeb(t *testing.T) {
 			Expect(t, os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(Succeed())
 		}
 
-		describe("GET /", func() {
+		describe("GET index", func() {
 			context("with no files", func() {
 				it("renders the empty state", func() {
 					rec := get(mux, "/")
@@ -103,7 +103,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 		})
 
-		describe("GET /download/{filename}", func() {
+		describe("GET download by filename", func() {
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := get(mux, "/download/"+file)
@@ -141,7 +141,7 @@ func TestLambadaWeb(t *testing.T) {
 		})
 
 		// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
-		describe("DELETE /download/{filename}", func() {
+		describe("DELETE download by filename", func() {
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := del(mux, "/download/"+file)
@@ -184,7 +184,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 		})
 
-		describe("GET /files.json", func() {
+		describe("GET files.json", func() {
 			context("with no files", func() {
 				it("returns an empty array", func() {
 					rec := get(mux, "/files.json")
@@ -212,7 +212,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 		})
 
-		describe("GET /style.css", func() {
+		describe("GET style.css", func() {
 			it("serves the embedded stylesheet", func() {
 				rec := get(mux, "/style.css")
 				Expect(t, rec.Code).To(Equal(http.StatusOK))
@@ -221,7 +221,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 		})
 
-		describe("GET /script.js", func() {
+		describe("GET script.js", func() {
 			it("serves the embedded script", func() {
 				rec := get(mux, "/script.js")
 				Expect(t, rec.Code).To(Equal(http.StatusOK))

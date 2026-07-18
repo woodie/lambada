@@ -1118,3 +1118,30 @@ the network, and `go test -v ./... | gorderly -fd` passed clean -- 55
 specs, 0 failed, across both `cmd/lambada-web` and `cmd/lambada-mta`. This
 is the actual end-to-end proof that both published modules work outside
 any local checkout, not just in the sandbox's replace-based setup.
+
+## Fixed a confusing tree render: literal `/` inside describe names
+
+That same `gorderly -fd` output showed `GET` followed by a blank line,
+then unrelated groups nested under it -- a real bug, not a rendering
+quirk. `spec`'s default (flat) mode joins nested names with `/`, and
+`gorderly` rebuilds its tree by splitting each leaf's full name on `/`; six
+`describe` blocks in `main_test.go` used literal HTTP paths as their names
+(`"GET /"`, `"GET /download/{filename}"`, `"DELETE /download/{filename}"`,
+`"GET /files.json"`, `"GET /style.css"`, `"GET /script.js"`), so their `/`
+characters were indistinguishable from the real hierarchy separator.
+`"GET /"`'s trailing slash produced an empty tree node; the others'
+internal slashes sliced them into extra levels that didn't reflect any
+real nesting, and every one of these coincidentally started with `"GET "`,
+so they all appeared to share one parent node that didn't actually exist
+in the test structure.
+
+Renamed to remove every literal `/`: `"GET index"`, `"GET download by
+filename"`, `"DELETE download by filename"`, `"GET files.json"`, `"GET
+style.css"`, `"GET script.js"`. No test behavior changed -- these are
+`describe` labels, not routes; the actual routes are still `mux.Handle`
+calls in `main.go`, untouched. Checked every other `spec`-based test file
+in this repo and `spec-demo` for the same pattern -- none found, this was
+isolated to `main_test.go`. Worth keeping in mind for any future spec
+suite: don't put literal `/` in `describe`/`context`/`it` names, since it's
+never just cosmetic here -- `spec`'s own flat naming, and Go's `-v` output
+for real nested subtests, both use `/` as a genuine hierarchy separator.
