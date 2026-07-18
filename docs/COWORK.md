@@ -1098,21 +1098,23 @@ the placeholder pseudo-version to `github.com/woodie/expect v0.1.0`, and
 test` now has to resolve the real published module, not a local checkout,
 which is exactly the point of using `lambada` as the test case.
 
-`replace github.com/sclevine/spec => ../spec` stays. The fork's own
-additions (`RunAliased`, `Describe`, `it.Context()`, `it.T()`, `Var[T]`)
-aren't tagged/published anywhere yet -- `require github.com/sclevine/spec
-v1.4.0` still resolves to upstream's real (feature-less) tag, so the local
-replace is the only thing currently supplying the fork's features. This
-stays until `spec`'s own fork is tagged and pushed for real, the same way
-`expect` just was.
+`spec` was tagged as its own `v0.1.0` the same session (see its
+`docs/COWORK.md`), so `replace github.com/sclevine/spec => ../spec` was
+also dropped in favor of `replace github.com/sclevine/spec =>
+github.com/woodie/spec v0.1.0` -- no local checkout involved for either
+dependency now.
 
-Needs, on your Mac:
+That first attempt surfaced two real bugs, not just friction: `expect`'s
+CI failed outright with "replacement directory ../spec does not exist"
+(GitHub Actions doesn't have a sibling checkout the way a local Mac does),
+and `spec`'s own `go.mod` still said `go 1.13`, too old for `Var[T]`'s
+generics and `it.Context()`. Both fixed at the source (`spec`'s `go.mod`
+bumped to `go 1.24`, both replaces repointed at real tags) before this
+repo's own verification below.
 
-```
-cd ~/workspace/lambada
-go mod tidy   # fetches github.com/woodie/expect@v0.1.0 for real, writes go.sum
-go test -v ./... | gorderly -fd
-```
-
-If this passes, it's the first real (non-`replace`) proof that consuming
-`expect` as a published module round-trips cleanly.
+**Confirmed for real**: `go mod tidy` fetched both
+`github.com/woodie/expect@v0.1.0` and `github.com/woodie/spec@v0.1.0` over
+the network, and `go test -v ./... | gorderly -fd` passed clean -- 55
+specs, 0 failed, across both `cmd/lambada-web` and `cmd/lambada-mta`. This
+is the actual end-to-end proof that both published modules work outside
+any local checkout, not just in the sandbox's replace-based setup.
