@@ -1086,3 +1086,33 @@ All five `cmd/lambada-web`/`cmd/lambada-mta` files updated:
 (`Run`, `Before`, `After`, `G`, `S`) are common enough words that
 dot-importing it would risk real collisions in a way `expect`'s
 distinctive matcher names don't.
+
+## This session: `expect` published, lambada as the first real consumer
+
+`github.com/woodie/expect` tagged and released as `v0.1.0` (real GitHub
+repo, real tag -- not just a local checkout). Per the account's own
+"Shared libraries across sibling repos" playbook, `lambada` is the first
+consumer to move off the local `replace`: `go.mod`'s `require` bumped from
+the placeholder pseudo-version to `github.com/woodie/expect v0.1.0`, and
+`replace github.com/woodie/expect => ../expect` removed entirely -- `go
+test` now has to resolve the real published module, not a local checkout,
+which is exactly the point of using `lambada` as the test case.
+
+`replace github.com/sclevine/spec => ../spec` stays. The fork's own
+additions (`RunAliased`, `Describe`, `it.Context()`, `it.T()`, `Var[T]`)
+aren't tagged/published anywhere yet -- `require github.com/sclevine/spec
+v1.4.0` still resolves to upstream's real (feature-less) tag, so the local
+replace is the only thing currently supplying the fork's features. This
+stays until `spec`'s own fork is tagged and pushed for real, the same way
+`expect` just was.
+
+Needs, on your Mac:
+
+```
+cd ~/workspace/lambada
+go mod tidy   # fetches github.com/woodie/expect@v0.1.0 for real, writes go.sum
+go test -v ./... | gorderly -fd
+```
+
+If this passes, it's the first real (non-`replace`) proof that consuming
+`expect` as a published module round-trips cleanly.

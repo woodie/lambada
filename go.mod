@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/emersion/go-smtp v0.24.0
 	github.com/sclevine/spec v1.4.0
-	github.com/woodie/expect v0.0.0-00010101000000-000000000000
+	github.com/woodie/expect v0.1.0
 	github.com/woodie/humane v0.9.4
 )
 
@@ -26,5 +26,3 @@ require (
 )
 
 replace github.com/sclevine/spec => ../spec
-
-replace github.com/woodie/expect => ../expect
