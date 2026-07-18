@@ -881,3 +881,86 @@ bump, vitest bump, workflow consolidation, badge fix -- 4 commits ahead of
 only, 1 commit ahead). Not pushed from the sandbox, per the usual "Pushing"
 rule in the account-wide `docs/COWORK.md` -- woodie pushes both from his
 Mac.
+
+## This session: migrating `cmd/lambada-web`'s tests off Ginkgo/Gomega
+
+Supersedes the "Next up" note above ("Ginkgo/Gomega... flagged here for
+visibility, not because it needs reconsidering") -- it is being
+reconsidered now, prompted by the same `sclevine/spec` evaluation done for
+`gorderly` (see that repo's own `docs/COWORK.md`, "Test-writing convention"
+section) landing on `~/workspace/spec` (the account's own fork, which added
+`Describe`/`it.Context()`/`it.T()`/`Var[T]` this session) plus a new
+`~/workspace/expect` matcher module, once real usage here -- not just
+`gorderly`'s own tests -- showed what a Gomega replacement actually needs to
+cover.
+
+All five `cmd/lambada-web` test files rewritten:
+
+- `middleware_test.go`, `server_test.go` -- direct `Describe`/`It`/`Expect`
+  translations. `server_test.go` needed explicit generic type arguments
+  twice (`expect.BeIdenticalTo[http.Handler](mux)`,
+  `expect.BeNumerically[time.Duration](">", 0)`) since Go's generic
+  inference doesn't look at how `.To(...)`'s result is used afterward, only
+  at the arguments given -- `mux`'s own type (`*http.ServeMux`) and the
+  untyped `0` don't match `got`'s type (`http.Handler`, `time.Duration`)
+  closely enough to infer on their own.
+- `scanfiles_test.go` -- `GinkgoT().TempDir()` became `it.T().TempDir()`
+  inside `it.Before`, the concrete case that justified adding `S.T()` to the
+  `spec` fork in the first place (mirrors `GinkgoT()`'s own reason for
+  existing). `DescribeTable`/`Entry` (the invalid-filename cases) became a
+  plain `for _, tc := range cases { it(tc.name, func(){...}) }` loop --
+  `it` is just a func value in `spec`, so calling it in a loop needs no
+  table-DSL equivalent at all.
+- `main_test.go` -- the deep-nesting case (`Describe` > `Context` > nested
+  `Context` > `It`, five levels at its worst). Each top-level
+  `describe(...)` block declares its own `context := describe` alias before
+  nesting -- same `G` value under two names, matching this account's
+  Quick/Kotest `describe`/`context` convention (see `next-caltrain-swift`/
+  `next-caltrain-kotlin`'s `GoodTimesSpec` files) even though `spec` itself
+  has no separate `Context` type. `Skip("running as root...")` inside
+  `BeforeEach` became `it.T().Skip(...)` inside `it.Before` -- the other
+  real `S.T()` use case, alongside `TempDir` above.
+- `main_suite_test.go` deleted outright. Its only job was Ginkgo's
+  `RunSpecs` entry point; `spec.Run` needs no shared suite registration
+  across files, so each file's own `func TestXxx(t *testing.T)` is a
+  complete, independent entry point on its own. `TestLambadaWeb` (the name
+  `main_suite_test.go` used) moved into `main_test.go` directly rather than
+  inventing a new name.
+
+`go.mod`: dropped `github.com/onsi/ginkgo/v2`/`github.com/onsi/gomega`,
+added `github.com/sclevine/spec v1.4.0` (real upstream tag, overridden
+locally) and a placeholder `github.com/woodie/expect
+v0.0.0-00010101000000-000000000000`, both via `replace` directives pointing
+at `../spec`/`../expect` for now. Left every indirect dependency
+(`go-logr/logr`, `slim-sprig`, `go-cmp`, `pprof`, `go.yaml.in/yaml`,
+`golang.org/x/net`) untouched rather than guessing by inspection which are
+still needed transitively by `go-smtp`/`humane` once Ginkgo/Gomega no
+longer pull them in -- that's exactly what a real `go mod tidy` resolves
+correctly, and hand-pruning risks getting it wrong.
+
+Made entirely by inspection -- no Go toolchain in this sandbox, same
+limitation flagged throughout this file. **Not yet confirmed on real
+hardware.** On your Mac, in order:
+
+```
+cd ~/workspace/lambada
+go mod tidy
+go test -v ./cmd/lambada-web/...
+```
+
+Once that's green: tag and push `~/workspace/spec` and `~/workspace/expect`
+(each has its own "Verification" notes in its own `docs/COWORK.md`), then
+swap the two `replace` lines in `go.mod` for real published versions and
+run `go mod tidy` again for a real `go.sum` -- the same tag-then-bump-then-
+`go mod tidy` sequence this file has used for every `humane` version bump
+above, just for two new modules instead of one.
+
+`package.json`'s `test`/`test-go`/`check` scripts updated too: `ginkgo-fd -r`/
+`ginkgo -r` replaced with `go test -v ./... | gorderly -fd` (verbose) and
+plain `go test ./...` (the `check` script's terse-on-success step -- bare
+`go test` is already terse, so no `gorderly` piping needed there). Needs
+`gorderly` on `PATH` (`go install github.com/woodie/gorderly@latest`,
+matching how that repo's own `docs/COWORK.md` describes installing it to
+`~/go/bin`) -- not yet confirmed this actually renders lambada's real
+`go test -v` output correctly, only `gorderly`'s own suite and the
+`spec-demo` translation have been confirmed against it so far.

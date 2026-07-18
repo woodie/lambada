@@ -4,8 +4,8 @@ go 1.26.3
 
 require (
 	github.com/emersion/go-smtp v0.24.0
-	github.com/onsi/ginkgo/v2 v2.29.0
-	github.com/onsi/gomega v1.41.0
+	github.com/sclevine/spec v1.4.0
+	github.com/woodie/expect v0.0.0-00010101000000-000000000000
 	github.com/woodie/humane v0.9.4
 )
 
@@ -24,3 +24,7 @@ require (
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 )
+
+replace github.com/sclevine/spec => ../spec
+
+replace github.com/woodie/expect => ../expect

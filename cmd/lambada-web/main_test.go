@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"time"
 	"strings"
+	"testing"
+	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/sclevine/spec"
+	"github.com/woodie/expect"
 )
 
 // get performs an in-process GET against newMux() without binding a real listener.
@@ -29,206 +30,212 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// Lambada WEB exercises the HTTP routes (scanfiles.go/server.go have their own test files).
-var _ = Describe("Lambada WEB", func() {
-	var (
-		mux  *http.ServeMux
-		file string
-	)
+// TestLambadaWeb exercises the HTTP routes (scanfiles_test.go/server_test.go have their own test files).
+func TestLambadaWeb(t *testing.T) {
+	spec.Run(t, "Lambada WEB", func(t *testing.T, describe spec.Describe, it spec.S) {
+		var mux *http.ServeMux
+		var file string
 
-	BeforeEach(func() {
-		scanDir = GinkgoT().TempDir() // stub implementation, mirrors lambada-mta's tests
-		mux = newMux()
-		file = "1234567890.pdf"
-	})
-
-	writeFile := func() {
-	  content := strings.Repeat("content.", 9999)
-		Expect(os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(Succeed())
-	}
-
-	Describe("GET /", func() {
-		Context("with no files", func() {
-			It("renders the empty state", func() {
-				rec := get(mux, "/")
-				Expect(rec.Code).To(Equal(http.StatusOK))
-				Expect(rec.Body.String()).To(ContainSubstring("Available Scans"))
-				Expect(rec.Body.String()).To(ContainSubstring("No files found in the directory."))
-			})
+		it.Before(func() {
+			scanDir = it.T().TempDir()
+			mux = newMux()
+			file = "1234567890.pdf"
 		})
 
-		Context("with a file", func() {
-			BeforeEach(writeFile)
+		writeFile := func() {
+			content := strings.Repeat("content.", 9999)
+			expect.That(t, os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(expect.Succeed())
+		}
 
-			It("renders a download link with the file's size and age", func() {
-				rec := get(mux, "/")
-				Expect(rec.Code).To(Equal(http.StatusOK))
-				Expect(rec.Body.String()).To(ContainSubstring("/download/" + file))
-				Expect(rec.Body.String()).To(ContainSubstring("📄 80 KB"))
+		describe("GET /", func() {
+			context := describe
+
+			context("with no files", func() {
+				it("renders the empty state", func() {
+					rec := get(mux, "/")
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+					expect.That(t, rec.Body.String()).To(expect.Contain("Available Scans"))
+					expect.That(t, rec.Body.String()).To(expect.Contain("No files found in the directory."))
+				})
 			})
 
-			Context("when files can be older", func() {
-				setFileAge := func(age time.Duration) {
-					when := time.Now().Add(-age)
-					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
-				}
+			context("with a file", func() {
+				it.Before(writeFile)
 
-				Context("just now", func() {
-					BeforeEach(func() { setFileAge(0) })
+				it("renders a download link with the file's size and age", func() {
+					rec := get(mux, "/")
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+					expect.That(t, rec.Body.String()).To(expect.Contain("/download/" + file))
+					expect.That(t, rec.Body.String()).To(expect.Contain("📄 80 KB"))
+				})
 
-					It("displays less than a minute ago", func() {
-						rec := get(mux, "/")
-						Expect(rec.Body.String()).To(ContainSubstring("less than a minute ago"))
+				context("when files can be older", func() {
+					setFileAge := func(age time.Duration) {
+						when := time.Now().Add(-age)
+						expect.That(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(expect.Succeed())
+					}
+
+					context("just now", func() {
+						it.Before(func() { setFileAge(0) })
+
+						it("displays less than a minute ago", func() {
+							rec := get(mux, "/")
+							expect.That(t, rec.Body.String()).To(expect.Contain("less than a minute ago"))
+						})
 					})
 				})
-			})
 
-			Context("when files can be newer", func() {
-				BeforeEach(func() {
-					when := time.Now().Add(3 * time.Minute)
-					Expect(os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
+				context("when files can be newer", func() {
+					it.Before(func() {
+						when := time.Now().Add(3 * time.Minute)
+						expect.That(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(expect.Succeed())
+					})
+
+					it("displays in 3 minutes", func() {
+						rec := get(mux, "/")
+						expect.That(t, rec.Body.String()).To(expect.Contain("in 3 minutes"))
+						expect.That(t, rec.Body.String()).NotTo(expect.Contain("ago"))
+					})
 				})
 
-				It("displays in 3 minutes", func() {
+				it("wires the delete confirm dialog with the full message", func() {
 					rec := get(mux, "/")
-					Expect(rec.Body.String()).To(ContainSubstring("in 3 minutes"))
-					Expect(rec.Body.String()).NotTo(ContainSubstring("ago"))
+					expect.That(t, rec.Body.String()).To(expect.Contain("Delete this scan from less than a minute ago?"))
+				})
+			})
+		})
+
+		describe("GET /download/{filename}", func() {
+			context := describe
+
+			context("when the file is missing", func() {
+				it("responds with 404", func() {
+					rec := get(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
 				})
 			})
 
-			It("wires the delete confirm dialog with the full message", func() {
-				rec := get(mux, "/")
-				Expect(rec.Body.String()).To(ContainSubstring("Delete this scan from less than a minute ago?"))
+			context("when the file exists", func() {
+				it.Before(writeFile)
+
+				it("responds with 200 and an attachment header", func() {
+					rec := get(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+					expect.That(t, rec.Header().Get("Content-Disposition")).To(expect.Contain(file))
+				})
+			})
+
+			context("when the directory can't be searched (permission error)", func() {
+				it.Before(func() {
+					if os.Geteuid() == 0 {
+						it.T().Skip("running as root; permission checks don't apply")
+					}
+					writeFile()
+					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
+				})
+				it.After(func() {
+					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
+				})
+
+				it("responds with 500", func() {
+					rec := get(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusInternalServerError))
+				})
+			})
+		})
+
+		// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
+		describe("DELETE /download/{filename}", func() {
+			context := describe
+
+			context("when the file is missing", func() {
+				it("responds with 404", func() {
+					rec := del(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
+				})
+			})
+
+			context("when the file exists", func() {
+				it.Before(writeFile)
+
+				it("responds with 204 and removes the file", func() {
+					rec := del(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusNoContent))
+					expect.That(t, filepath.Join(scanDir, file)).NotTo(expect.BeAnExistingFile())
+				})
+
+				it("leaves the file gone for a subsequent GET", func() {
+					del(mux, "/download/"+file)
+					rec := get(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
+				})
+			})
+
+			context("when the directory can't be searched (permission error)", func() {
+				it.Before(func() {
+					if os.Geteuid() == 0 {
+						it.T().Skip("running as root; permission checks don't apply")
+					}
+					writeFile()
+					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
+				})
+				it.After(func() {
+					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
+				})
+
+				it("responds with 500", func() {
+					rec := del(mux, "/download/"+file)
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusInternalServerError))
+				})
+			})
+		})
+
+		describe("GET /files.json", func() {
+			context := describe
+
+			context("with no files", func() {
+				it("returns an empty array", func() {
+					rec := get(mux, "/files.json")
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+					expect.That(t, rec.Header().Get("Content-Type")).To(expect.Equal("application/json"))
+
+					var entries []map[string]any
+					expect.That(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(expect.Succeed())
+					expect.That(t, len(entries)).To(expect.Equal(0))
+				})
+			})
+
+			// The exact JSON shape is unit-tested in scanfiles_test.go; this just checks the route is wired up.
+			context("with a file", func() {
+				it.Before(writeFile)
+
+				it("returns one entry", func() {
+					rec := get(mux, "/files.json")
+					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+
+					var entries []map[string]any
+					expect.That(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(expect.Succeed())
+					expect.That(t, len(entries)).To(expect.Equal(1))
+				})
+			})
+		})
+
+		describe("GET /style.css", func() {
+			it("serves the embedded stylesheet", func() {
+				rec := get(mux, "/style.css")
+				expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+				expect.That(t, rec.Header().Get("Content-Type")).To(expect.Contain("text/css"))
+				expect.That(t, rec.Body.String()).To(expect.Contain("font-family"))
+			})
+		})
+
+		describe("GET /script.js", func() {
+			it("serves the embedded script", func() {
+				rec := get(mux, "/script.js")
+				expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+				expect.That(t, rec.Header().Get("Content-Type")).To(expect.Contain("javascript"))
+				expect.That(t, rec.Body.String()).To(expect.Contain("function deleteFile"))
 			})
 		})
 	})
-
-	Describe("GET /download/{filename}", func() {
-		Context("when the file is missing", func() {
-			It("responds with 404", func() {
-				rec := get(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("when the file exists", func() {
-			BeforeEach(writeFile)
-
-			It("responds with 200 and an attachment header", func() {
-				rec := get(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusOK))
-				Expect(rec.Header().Get("Content-Disposition")).To(ContainSubstring(file))
-			})
-		})
-
-		Context("when the directory can't be searched (permission error)", func() {
-			BeforeEach(func() {
-				if os.Geteuid() == 0 {
-					Skip("running as root; permission checks don't apply")
-				}
-				writeFile()
-				Expect(os.Chmod(scanDir, 0o000)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(os.Chmod(scanDir, 0o755)).To(Succeed())
-			})
-
-			It("responds with 500", func() {
-				rec := get(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-			})
-		})
-	})
-
-	// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
-	Describe("DELETE /download/{filename}", func() {
-		Context("when the file is missing", func() {
-			It("responds with 404", func() {
-				rec := del(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("when the file exists", func() {
-			BeforeEach(writeFile)
-
-			It("responds with 204 and removes the file", func() {
-				rec := del(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusNoContent))
-				Expect(filepath.Join(scanDir, file)).NotTo(BeAnExistingFile())
-			})
-
-			It("leaves the file gone for a subsequent GET", func() {
-				del(mux, "/download/"+file)
-				rec := get(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("when the directory can't be searched (permission error)", func() {
-			BeforeEach(func() {
-				if os.Geteuid() == 0 {
-					Skip("running as root; permission checks don't apply")
-				}
-				writeFile()
-				Expect(os.Chmod(scanDir, 0o000)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(os.Chmod(scanDir, 0o755)).To(Succeed())
-			})
-
-			It("responds with 500", func() {
-				rec := del(mux, "/download/"+file)
-				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-			})
-		})
-	})
-
-	Describe("GET /files.json", func() {
-		Context("with no files", func() {
-			It("returns an empty array", func() {
-				rec := get(mux, "/files.json")
-				Expect(rec.Code).To(Equal(http.StatusOK))
-				Expect(rec.Header().Get("Content-Type")).To(Equal("application/json"))
-
-				var entries []map[string]any
-				Expect(json.Unmarshal(rec.Body.Bytes(), &entries)).To(Succeed())
-				Expect(entries).To(BeEmpty())
-			})
-		})
-
-		// The exact JSON shape is unit-tested in scanfiles_test.go; this just checks the route is wired up.
-		Context("with a file", func() {
-			BeforeEach(writeFile)
-
-			It("returns one entry", func() {
-				rec := get(mux, "/files.json")
-				Expect(rec.Code).To(Equal(http.StatusOK))
-
-				var entries []map[string]any
-				Expect(json.Unmarshal(rec.Body.Bytes(), &entries)).To(Succeed())
-				Expect(entries).To(HaveLen(1))
-			})
-		})
-	})
-
-	Describe("GET /style.css", func() {
-		It("serves the embedded stylesheet", func() {
-			rec := get(mux, "/style.css")
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Header().Get("Content-Type")).To(ContainSubstring("text/css"))
-			Expect(rec.Body.String()).To(ContainSubstring("font-family"))
-		})
-	})
-
-	Describe("GET /script.js", func() {
-		It("serves the embedded script", func() {
-			rec := get(mux, "/script.js")
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Header().Get("Content-Type")).To(ContainSubstring("javascript"))
-			Expect(rec.Body.String()).To(ContainSubstring("function deleteFile"))
-		})
-	})
-})
+}

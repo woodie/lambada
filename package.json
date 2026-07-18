@@ -1,16 +1,16 @@
 {
   "name": "lambada",
   "private": true,
-  "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/ginkgo)",
+  "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/gorderly)",
   "scripts": {
-    "test": "vitest run && ginkgo-fd -r",
+    "test": "vitest run && go test -v ./... | gorderly -fd",
     "lint-js": "standard --fix",
     "test-js": "vitest run",
     "lint-go": "golangci-lint run --fix",
-    "test-go": "ginkgo-fd -r",
+    "test-go": "go test -v ./... | gorderly -fd",
     "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
     "format-go": "go fmt ./...",
-    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 ginkgo -r && npm run lint-html"
+    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html"
   },
   "devDependencies": {
     "html-validate": "^11.5.6",
