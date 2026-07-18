@@ -33,8 +33,7 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 // TestLambadaWeb exercises the HTTP routes (scanfiles_test.go/server_test.go have their own test files).
 func TestLambadaWeb(t *testing.T) {
 	spec.Run(t, "Lambada WEB", func(t *testing.T, describe spec.Describe, it spec.S) {
-		before, after := it.Before, it.After
-		context := describe.AsContext()
+		before, after, context := it.Before, it.After, describe.AsContext()
 
 		var mux *http.ServeMux
 		var file string

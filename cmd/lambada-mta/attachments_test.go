@@ -42,8 +42,7 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 
 func TestAttachments(t *testing.T) {
 	spec.Run(t, "Attachments", func(t *testing.T, describe spec.Describe, it spec.S) {
-		before := it.Before
-		context := describe.AsContext()
+		before, context := it.Before, describe.AsContext()
 
 		before(func() { attachmentDir = it.T().TempDir() }) // stub implementation
 

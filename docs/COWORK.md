@@ -1029,3 +1029,8 @@ gets without changing `G`/`S`'s function signatures to inject fresh
 `describe`/`context`/`it`/`before`/`after` values into every nested
 closure's own parameters, which would be a much larger, likely
 non-upstreamable redesign, not attempted here.
+
+Combined further into one multiple-assignment line per file (`before,
+after, context := it.Before, it.After, describe.AsContext()`, or `before,
+context := it.Before, describe.AsContext()` where `after`'s unused) --
+plain Go, no `spec` involvement either way.
