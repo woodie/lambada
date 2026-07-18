@@ -33,10 +33,12 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 // TestLambadaWeb exercises the HTTP routes (scanfiles_test.go/server_test.go have their own test files).
 func TestLambadaWeb(t *testing.T) {
 	spec.Run(t, "Lambada WEB", func(t *testing.T, describe spec.Describe, it spec.S) {
+		before, after := it.Before, it.After
+
 		var mux *http.ServeMux
 		var file string
 
-		it.Before(func() {
+		before(func() {
 			scanDir = it.T().TempDir()
 			mux = newMux()
 			file = "1234567890.pdf"
@@ -48,7 +50,7 @@ func TestLambadaWeb(t *testing.T) {
 		}
 
 		describe("GET /", func() {
-			context := describe
+			context := describe.AsContext()
 
 			context("with no files", func() {
 				it("renders the empty state", func() {
@@ -60,7 +62,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 
 			context("with a file", func() {
-				it.Before(writeFile)
+				before(writeFile)
 
 				it("renders a download link with the file's size and age", func() {
 					rec := get(mux, "/")
@@ -76,7 +78,7 @@ func TestLambadaWeb(t *testing.T) {
 					}
 
 					context("just now", func() {
-						it.Before(func() { setFileAge(0) })
+						before(func() { setFileAge(0) })
 
 						it("displays less than a minute ago", func() {
 							rec := get(mux, "/")
@@ -86,7 +88,7 @@ func TestLambadaWeb(t *testing.T) {
 				})
 
 				context("when files can be newer", func() {
-					it.Before(func() {
+					before(func() {
 						when := time.Now().Add(3 * time.Minute)
 						expect.That(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(expect.Succeed())
 					})
@@ -106,7 +108,7 @@ func TestLambadaWeb(t *testing.T) {
 		})
 
 		describe("GET /download/{filename}", func() {
-			context := describe
+			context := describe.AsContext()
 
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
@@ -116,7 +118,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 
 			context("when the file exists", func() {
-				it.Before(writeFile)
+				before(writeFile)
 
 				it("responds with 200 and an attachment header", func() {
 					rec := get(mux, "/download/"+file)
@@ -126,14 +128,14 @@ func TestLambadaWeb(t *testing.T) {
 			})
 
 			context("when the directory can't be searched (permission error)", func() {
-				it.Before(func() {
+				before(func() {
 					if os.Geteuid() == 0 {
 						it.T().Skip("running as root; permission checks don't apply")
 					}
 					writeFile()
 					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
 				})
-				it.After(func() {
+				after(func() {
 					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
 				})
 
@@ -146,7 +148,7 @@ func TestLambadaWeb(t *testing.T) {
 
 		// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
 		describe("DELETE /download/{filename}", func() {
-			context := describe
+			context := describe.AsContext()
 
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
@@ -156,7 +158,7 @@ func TestLambadaWeb(t *testing.T) {
 			})
 
 			context("when the file exists", func() {
-				it.Before(writeFile)
+				before(writeFile)
 
 				it("responds with 204 and removes the file", func() {
 					rec := del(mux, "/download/"+file)
@@ -172,14 +174,14 @@ func TestLambadaWeb(t *testing.T) {
 			})
 
 			context("when the directory can't be searched (permission error)", func() {
-				it.Before(func() {
+				before(func() {
 					if os.Geteuid() == 0 {
 						it.T().Skip("running as root; permission checks don't apply")
 					}
 					writeFile()
 					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
 				})
-				it.After(func() {
+				after(func() {
 					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
 				})
 
@@ -191,7 +193,7 @@ func TestLambadaWeb(t *testing.T) {
 		})
 
 		describe("GET /files.json", func() {
-			context := describe
+			context := describe.AsContext()
 
 			context("with no files", func() {
 				it("returns an empty array", func() {
@@ -207,7 +209,7 @@ func TestLambadaWeb(t *testing.T) {
 
 			// The exact JSON shape is unit-tested in scanfiles_test.go; this just checks the route is wired up.
 			context("with a file", func() {
-				it.Before(writeFile)
+				before(writeFile)
 
 				it("returns one entry", func() {
 					rec := get(mux, "/files.json")

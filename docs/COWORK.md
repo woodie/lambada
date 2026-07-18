@@ -989,3 +989,26 @@ Same verification gap as `lambada-web`: no Go toolchain in this sandbox,
 not yet run for real. `go mod tidy && go test -v ./cmd/lambada-mta/...`
 covers this package once you're back on your Mac -- same command block as
 `lambada-web`'s, since both packages share one `go.mod`.
+
+## This session: naming the context alias, dropping `it.` off Before/After
+
+Two readability follow-ups, prompted directly by reviewing the migration
+above.
+
+`context := describe` (used at the top of every nested group across both
+packages) is now `context := describe.AsContext()` -- a one-line, no-op
+method added to `~/workspace/spec` (`func (g G) AsContext() G { return g }`)
+purely so the alias explains itself instead of reading like a bare, easy-to-
+miss assignment.
+
+`it.Before(...)`/`it.After(...)` shortened to bare `before(...)`/`after(...)`
+via a Go method value, declared once per file right where `it` first comes
+into scope: `before, after := it.Before, it.After` (or just `before :=
+it.Before` in files with no `After` calls -- Go won't compile an unused
+`after`). No `spec` change needed for this one; method values already do
+the job. The `it(...)` call itself (declaring a spec) is unchanged -- only
+its `Before`/`After` methods got the shorthand, since dropping `it` from
+`it(...)` entirely would need Ginkgo-style ambient global state, which is
+exactly the design `spec` (and this fork) deliberately avoids. Applied to
+every already-migrated file: `scanfiles_test.go`/`main_test.go`
+(`lambada-web`) and `attachments_test.go` (`lambada-mta`).
