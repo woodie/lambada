@@ -7,29 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"lambada/internal/envutil"
-	"lambada/loglevel"
-
 	"github.com/woodie/humane"
-)
-
-var (
-	scanDir    = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
-	listenAddr = envutil.Or("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
 )
 
 type listingData struct { Listing []scan }
 
 //go:embed views/listing.html.tmpl
 var viewsFS embed.FS
-//go:embed static
-var staticFS embed.FS
 
 // render listing.html.tmpl with timeAgo and humanSize
 var listingTemplate = template.Must(
@@ -44,16 +34,16 @@ var listingTemplate = template.Must(
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Route to list all available files -- a listing error is treated as no files, not a failed request
+	// Route to list all available files
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		scans, _ := scanFilesListing(scanDir)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := listingTemplate.Execute(w, listingData{Listing: scans}); err != nil {
-			log.Printf("template error: %v", err)
+			log.Printf("html template error: %v", err)
 		}
 	})
 
-	// Route to JSON list of files (for zouk client) -- a listing error is treated as no files, not a failed request
+	// Route to JSON list of files (for zouk client)
 	mux.HandleFunc("GET /files.json", func(w http.ResponseWriter, r *http.Request) {
 		scans, _ := scanFilesListing(scanDir)
 		w.Header().Set("Content-Type", "application/json")
@@ -80,31 +70,22 @@ func newMux() *http.ServeMux {
 		path, err := scanFilesPath(r.PathValue("filename"))
 		if errors.Is(err, os.ErrNotExist) {
 			http.Error(w, "File not found", http.StatusNotFound) // 404
-		} else if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
-		} else if err := os.Remove(path); err != nil {
-			log.Printf("delete error: %v", err)
+		} else if err != nil || os.Remove(path) != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
 		} else {
 			w.WriteHeader(http.StatusNoContent) // 204
 		}
 	})
 
-	// Catch-all pattern to fetch static content
-	mux.Handle("GET /", func() http.Handler {
-		static, err := fs.Sub(staticFS, "static")
-		if err != nil {
-			log.Fatalf("static assets: %v", err)
-		}
-		return http.FileServerFS(static)
-	}())
+	// Catch-all pattern for static content
+	mux.Handle("GET /", staticHandler())
 
 	return mux
 }
 
-// LOG_LEVEL=OFF silences logging
+// LOG_QUIET silences logging
 func init() {
-	loglevel.Apply()
+	if os.Getenv("LOG_QUIET") != "" { log.SetOutput(io.Discard) }
 }
 
 func main() {

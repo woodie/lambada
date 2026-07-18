@@ -4,7 +4,11 @@ package main
 import (
 	"net/http"
 	"time"
+
+	"lambada/internal/envutil"
 )
+
+var listenAddr = envutil.Or("LAMBADA_WEB_LISTEN_ADDR", "0.0.0.0:8080")
 
 // Nonzero timeouts avoid the zero-value http.Server that could leak idle keep-alive connections indefinitely (suspected cause of issue #2).
 const (

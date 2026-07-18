@@ -5,9 +5,8 @@ import (
 	"io"
 	"log"
 	"net/mail"
+	"os"
 	"time"
-
-	"lambada/loglevel"
 
 	"github.com/emersion/go-smtp"
 )
@@ -40,9 +39,9 @@ func (s *Session) Data(r io.Reader) error {
 	return processAttachments(msg)
 }
 
-// LOG_LEVEL=OFF silences all logging (see package.json's check script).
+// LOG_QUIET silences all logging (see package.json's check script).
 func init() {
-	loglevel.Apply()
+	if os.Getenv("LOG_QUIET") != "" { log.SetOutput(io.Discard) }
 }
 
 func main() {

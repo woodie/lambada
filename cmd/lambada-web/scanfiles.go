@@ -9,7 +9,11 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"lambada/internal/envutil"
 )
+
+var scanDir = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 
 // scan describes one file available for download.
 type scan struct {
