@@ -1068,3 +1068,21 @@ spec.RunAliased(t, "Lambada WEB", func(t *testing.T, describe, context spec.Desc
 `middleware_test.go`/`server_test.go` keep plain `spec.Run` since they
 never needed `before`/`after`/`context` at all -- routing them through
 `RunAliased` would only add unused-parameter noise for no benefit.
+
+## This session: dot-importing `expect`, `That` renamed to `Expect`
+
+Reversal, prompted directly by woodie: a real test file ends up full of
+`expect.Expect(something).To(expect.Contain("whatever"))`, and if `expect`
+is meant to be a matcher library people actually reach for instead of
+gomega/testify, the qualifier on every line is exactly the clutter working
+against that. See `expect`'s own `docs/COWORK.md` ("Dot-imports: reversed")
+for the full reasoning -- `That` renamed to `Expect` there, and dot-import
+is now that package's documented, recommended usage.
+
+All five `cmd/lambada-web`/`cmd/lambada-mta` files updated:
+`"github.com/woodie/expect"` -> `. "github.com/woodie/expect"`, every
+`expect.Expect(...)`/`expect.Equal(...)`/etc. call site stripped of its
+`expect.` qualifier. `spec` itself stays un-dot-imported -- its exports
+(`Run`, `Before`, `After`, `G`, `S`) are common enough words that
+dot-importing it would risk real collisions in a way `expect`'s
+distinctive matcher names don't.

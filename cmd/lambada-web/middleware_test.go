@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/woodie/expect"
+	. "github.com/woodie/expect"
 )
 
 // TestMiddleware exercises withLogging, the request-logging wrapper middleware.go defines.
@@ -22,8 +22,8 @@ func TestMiddleware(t *testing.T) {
 				rec := httptest.NewRecorder()
 				withLogging(inner).ServeHTTP(rec, req)
 
-				expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
-				expect.That(t, rec.Body.String()).To(expect.Contain("nope"))
+				Expect(t, rec.Code).To(Equal(http.StatusNotFound))
+				Expect(t, rec.Body.String()).To(Contain("nope"))
 			})
 
 			it("defaults to 200 when the handler never calls WriteHeader", func() {
@@ -33,7 +33,7 @@ func TestMiddleware(t *testing.T) {
 				rec := httptest.NewRecorder()
 				withLogging(inner).ServeHTTP(rec, req)
 
-				expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+				Expect(t, rec.Code).To(Equal(http.StatusOK))
 			})
 		})
 	})

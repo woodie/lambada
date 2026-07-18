@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/sclevine/spec"
-	"github.com/woodie/expect"
+	. "github.com/woodie/expect"
 )
 
 // get performs an in-process GET against newMux() without binding a real listener.
@@ -44,16 +44,16 @@ func TestLambadaWeb(t *testing.T) {
 
 		writeFile := func() {
 			content := strings.Repeat("content.", 9999)
-			expect.That(t, os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(expect.Succeed())
+			Expect(t, os.WriteFile(filepath.Join(scanDir, file), []byte(content), 0o644)).To(Succeed())
 		}
 
 		describe("GET /", func() {
 			context("with no files", func() {
 				it("renders the empty state", func() {
 					rec := get(mux, "/")
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-					expect.That(t, rec.Body.String()).To(expect.Contain("Available Scans"))
-					expect.That(t, rec.Body.String()).To(expect.Contain("No files found in the directory."))
+					Expect(t, rec.Code).To(Equal(http.StatusOK))
+					Expect(t, rec.Body.String()).To(Contain("Available Scans"))
+					Expect(t, rec.Body.String()).To(Contain("No files found in the directory."))
 				})
 			})
 
@@ -62,15 +62,15 @@ func TestLambadaWeb(t *testing.T) {
 
 				it("renders a download link with the file's size and age", func() {
 					rec := get(mux, "/")
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-					expect.That(t, rec.Body.String()).To(expect.Contain("/download/" + file))
-					expect.That(t, rec.Body.String()).To(expect.Contain("📄 80 KB"))
+					Expect(t, rec.Code).To(Equal(http.StatusOK))
+					Expect(t, rec.Body.String()).To(Contain("/download/" + file))
+					Expect(t, rec.Body.String()).To(Contain("📄 80 KB"))
 				})
 
 				context("when files can be older", func() {
 					setFileAge := func(age time.Duration) {
 						when := time.Now().Add(-age)
-						expect.That(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(expect.Succeed())
+						Expect(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
 					}
 
 					context("just now", func() {
@@ -78,7 +78,7 @@ func TestLambadaWeb(t *testing.T) {
 
 						it("displays less than a minute ago", func() {
 							rec := get(mux, "/")
-							expect.That(t, rec.Body.String()).To(expect.Contain("less than a minute ago"))
+							Expect(t, rec.Body.String()).To(Contain("less than a minute ago"))
 						})
 					})
 				})
@@ -86,19 +86,19 @@ func TestLambadaWeb(t *testing.T) {
 				context("when files can be newer", func() {
 					before(func() {
 						when := time.Now().Add(3 * time.Minute)
-						expect.That(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(expect.Succeed())
+						Expect(t, os.Chtimes(filepath.Join(scanDir, file), when, when)).To(Succeed())
 					})
 
 					it("displays in 3 minutes", func() {
 						rec := get(mux, "/")
-						expect.That(t, rec.Body.String()).To(expect.Contain("in 3 minutes"))
-						expect.That(t, rec.Body.String()).NotTo(expect.Contain("ago"))
+						Expect(t, rec.Body.String()).To(Contain("in 3 minutes"))
+						Expect(t, rec.Body.String()).NotTo(Contain("ago"))
 					})
 				})
 
 				it("wires the delete confirm dialog with the full message", func() {
 					rec := get(mux, "/")
-					expect.That(t, rec.Body.String()).To(expect.Contain("Delete this scan from less than a minute ago?"))
+					Expect(t, rec.Body.String()).To(Contain("Delete this scan from less than a minute ago?"))
 				})
 			})
 		})
@@ -107,7 +107,7 @@ func TestLambadaWeb(t *testing.T) {
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := get(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
+					Expect(t, rec.Code).To(Equal(http.StatusNotFound))
 				})
 			})
 
@@ -116,8 +116,8 @@ func TestLambadaWeb(t *testing.T) {
 
 				it("responds with 200 and an attachment header", func() {
 					rec := get(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-					expect.That(t, rec.Header().Get("Content-Disposition")).To(expect.Contain(file))
+					Expect(t, rec.Code).To(Equal(http.StatusOK))
+					Expect(t, rec.Header().Get("Content-Disposition")).To(Contain(file))
 				})
 			})
 
@@ -127,15 +127,15 @@ func TestLambadaWeb(t *testing.T) {
 						it.T().Skip("running as root; permission checks don't apply")
 					}
 					writeFile()
-					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
+					Expect(t, os.Chmod(scanDir, 0o000)).To(Succeed())
 				})
 				after(func() {
-					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
+					Expect(t, os.Chmod(scanDir, 0o755)).To(Succeed())
 				})
 
 				it("responds with 500", func() {
 					rec := get(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusInternalServerError))
+					Expect(t, rec.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -145,7 +145,7 @@ func TestLambadaWeb(t *testing.T) {
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := del(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
+					Expect(t, rec.Code).To(Equal(http.StatusNotFound))
 				})
 			})
 
@@ -154,14 +154,14 @@ func TestLambadaWeb(t *testing.T) {
 
 				it("responds with 204 and removes the file", func() {
 					rec := del(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusNoContent))
-					expect.That(t, filepath.Join(scanDir, file)).NotTo(expect.BeAnExistingFile())
+					Expect(t, rec.Code).To(Equal(http.StatusNoContent))
+					Expect(t, filepath.Join(scanDir, file)).NotTo(BeAnExistingFile())
 				})
 
 				it("leaves the file gone for a subsequent GET", func() {
 					del(mux, "/download/"+file)
 					rec := get(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusNotFound))
+					Expect(t, rec.Code).To(Equal(http.StatusNotFound))
 				})
 			})
 
@@ -171,15 +171,15 @@ func TestLambadaWeb(t *testing.T) {
 						it.T().Skip("running as root; permission checks don't apply")
 					}
 					writeFile()
-					expect.That(t, os.Chmod(scanDir, 0o000)).To(expect.Succeed())
+					Expect(t, os.Chmod(scanDir, 0o000)).To(Succeed())
 				})
 				after(func() {
-					expect.That(t, os.Chmod(scanDir, 0o755)).To(expect.Succeed())
+					Expect(t, os.Chmod(scanDir, 0o755)).To(Succeed())
 				})
 
 				it("responds with 500", func() {
 					rec := del(mux, "/download/"+file)
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusInternalServerError))
+					Expect(t, rec.Code).To(Equal(http.StatusInternalServerError))
 				})
 			})
 		})
@@ -188,12 +188,12 @@ func TestLambadaWeb(t *testing.T) {
 			context("with no files", func() {
 				it("returns an empty array", func() {
 					rec := get(mux, "/files.json")
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-					expect.That(t, rec.Header().Get("Content-Type")).To(expect.Equal("application/json"))
+					Expect(t, rec.Code).To(Equal(http.StatusOK))
+					Expect(t, rec.Header().Get("Content-Type")).To(Equal("application/json"))
 
 					var entries []map[string]any
-					expect.That(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(expect.Succeed())
-					expect.That(t, len(entries)).To(expect.Equal(0))
+					Expect(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(Succeed())
+					Expect(t, len(entries)).To(Equal(0))
 				})
 			})
 
@@ -203,11 +203,11 @@ func TestLambadaWeb(t *testing.T) {
 
 				it("returns one entry", func() {
 					rec := get(mux, "/files.json")
-					expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
+					Expect(t, rec.Code).To(Equal(http.StatusOK))
 
 					var entries []map[string]any
-					expect.That(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(expect.Succeed())
-					expect.That(t, len(entries)).To(expect.Equal(1))
+					Expect(t, json.Unmarshal(rec.Body.Bytes(), &entries)).To(Succeed())
+					Expect(t, len(entries)).To(Equal(1))
 				})
 			})
 		})
@@ -215,18 +215,18 @@ func TestLambadaWeb(t *testing.T) {
 		describe("GET /style.css", func() {
 			it("serves the embedded stylesheet", func() {
 				rec := get(mux, "/style.css")
-				expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-				expect.That(t, rec.Header().Get("Content-Type")).To(expect.Contain("text/css"))
-				expect.That(t, rec.Body.String()).To(expect.Contain("font-family"))
+				Expect(t, rec.Code).To(Equal(http.StatusOK))
+				Expect(t, rec.Header().Get("Content-Type")).To(Contain("text/css"))
+				Expect(t, rec.Body.String()).To(Contain("font-family"))
 			})
 		})
 
 		describe("GET /script.js", func() {
 			it("serves the embedded script", func() {
 				rec := get(mux, "/script.js")
-				expect.That(t, rec.Code).To(expect.Equal(http.StatusOK))
-				expect.That(t, rec.Header().Get("Content-Type")).To(expect.Contain("javascript"))
-				expect.That(t, rec.Body.String()).To(expect.Contain("function deleteFile"))
+				Expect(t, rec.Code).To(Equal(http.StatusOK))
+				Expect(t, rec.Header().Get("Content-Type")).To(Contain("javascript"))
+				Expect(t, rec.Body.String()).To(Contain("function deleteFile"))
 			})
 		})
 	})

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/sclevine/spec"
-	"github.com/woodie/expect"
+	. "github.com/woodie/expect"
 )
 
 var plainMessage = "From: sender@example.com\r\n" +
@@ -49,14 +49,14 @@ func TestAttachments(t *testing.T) {
 				it("creates the directory", func() {
 					attachmentDir = filepath.Join(it.T().TempDir(), "newdir")
 					checkAttachmentDir()
-					expect.That(t, attachmentDir).To(expect.BeADirectory())
+					Expect(t, attachmentDir).To(BeADirectory())
 				})
 			})
 
 			context("when the path is a real directory", func() {
 				it("does not error", func() {
 					attachmentDir = it.T().TempDir()
-					expect.That(t, func() { checkAttachmentDir() }).NotTo(expect.Panic())
+					Expect(t, func() { checkAttachmentDir() }).NotTo(Panic())
 				})
 			})
 
@@ -65,7 +65,7 @@ func TestAttachments(t *testing.T) {
 					target := it.T().TempDir()
 					attachmentDir = filepath.Join(it.T().TempDir(), "link")
 					_ = os.Symlink(target, attachmentDir)
-					expect.That(t, func() { checkAttachmentDir() }).NotTo(expect.Panic())
+					Expect(t, func() { checkAttachmentDir() }).NotTo(Panic())
 				})
 			})
 		})
@@ -85,7 +85,7 @@ func TestAttachments(t *testing.T) {
 			context("when entries are recent", func() {
 				it("keeps the PDF file", func() {
 					cleanupOldFiles()
-					expect.That(t, pdf).To(expect.BeAnExistingFile())
+					Expect(t, pdf).To(BeAnExistingFile())
 				})
 			})
 
@@ -99,15 +99,15 @@ func TestAttachments(t *testing.T) {
 
 				it("deletes the PDF file", func() {
 					cleanupOldFiles()
-					expect.That(t, pdf).NotTo(expect.BeAnExistingFile())
+					Expect(t, pdf).NotTo(BeAnExistingFile())
 				})
 				it("keeps the .DS_Store", func() {
 					cleanupOldFiles()
-					expect.That(t, dss).To(expect.BeAnExistingFile())
+					Expect(t, dss).To(BeAnExistingFile())
 				})
 				it("keeps the directory", func() {
 					cleanupOldFiles()
-					expect.That(t, dir).To(expect.BeADirectory())
+					Expect(t, dir).To(BeADirectory())
 				})
 			})
 		})
@@ -117,65 +117,65 @@ func TestAttachments(t *testing.T) {
 
 			processMessage := func(raw string) {
 				msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
-				expect.That(t, msgErr).To(expect.Succeed())
+				Expect(t, msgErr).To(Succeed())
 				err = processAttachments(msg)
 			}
 
 			context("when the message is not multipart", func() {
 				before(func() { processMessage(plainMessage) })
 
-				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("returns no error", func() { Expect(t, err).To(Succeed()) })
 				it("saves no files", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, len(entries)).To(expect.Equal(0))
+					Expect(t, len(entries)).To(Equal(0))
 				})
 			})
 
 			context("when the message has only inline parts", func() {
 				before(func() { processMessage(inlineMessage) })
 
-				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("returns no error", func() { Expect(t, err).To(Succeed()) })
 				it("saves no files", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, len(entries)).To(expect.Equal(0))
+					Expect(t, len(entries)).To(Equal(0))
 				})
 			})
 
 			context("when the message has an attachment", func() {
 				before(func() { processMessage(multipartMessage) })
 
-				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("returns no error", func() { Expect(t, err).To(Succeed()) })
 				it("saves one file", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, len(entries)).To(expect.Equal(1))
+					Expect(t, len(entries)).To(Equal(1))
 				})
 				it("preserves the file extension", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, filepath.Ext(entries[0].Name())).To(expect.Equal(".txt"))
+					Expect(t, filepath.Ext(entries[0].Name())).To(Equal(".txt"))
 				})
 				it("preserves the file content", func() {
 					entries, _ := os.ReadDir(attachmentDir)
 					data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
-					expect.That(t, string(data)).To(expect.Equal("file content"))
+					Expect(t, string(data)).To(Equal("file content"))
 				})
 			})
 
 			context("when the message has a base64-encoded PDF attachment", func() {
 				before(func() { processMessage(base64PdfMessage) })
 
-				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("returns no error", func() { Expect(t, err).To(Succeed()) })
 				it("saves one file", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, len(entries)).To(expect.Equal(1))
+					Expect(t, len(entries)).To(Equal(1))
 				})
 				it("preserves the file extension", func() {
 					entries, _ := os.ReadDir(attachmentDir)
-					expect.That(t, filepath.Ext(entries[0].Name())).To(expect.Equal(".pdf"))
+					Expect(t, filepath.Ext(entries[0].Name())).To(Equal(".pdf"))
 				})
 				it("decodes the base64 content correctly", func() {
 					entries, _ := os.ReadDir(attachmentDir)
 					data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
-					expect.That(t, string(data)).To(expect.Equal("fake pdf content"))
+					Expect(t, string(data)).To(Equal("fake pdf content"))
 				})
 			})
 		})
@@ -187,10 +187,10 @@ func TestAttachments(t *testing.T) {
 				before(func() { path = filepath.Join(attachmentDir, "test.pdf") })
 
 				it("writes the content to disk", func() {
-					expect.That(t, saveAttachment(strings.NewReader("fake pdf content"), path)).To(expect.Succeed())
+					Expect(t, saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
 					data, err := os.ReadFile(path)
-					expect.That(t, err).To(expect.Succeed())
-					expect.That(t, string(data)).To(expect.Equal("fake pdf content"))
+					Expect(t, err).To(Succeed())
+					Expect(t, string(data)).To(Equal("fake pdf content"))
 				})
 			})
 
@@ -198,7 +198,7 @@ func TestAttachments(t *testing.T) {
 				before(func() { path = "/nonexistent/dir/file.pdf" })
 
 				it("returns an error", func() {
-					expect.That(t, saveAttachment(strings.NewReader("data"), path)).To(expect.HaveOccurred())
+					Expect(t, saveAttachment(strings.NewReader("data"), path)).To(HaveOccurred())
 				})
 			})
 		})
