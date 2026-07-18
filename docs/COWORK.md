@@ -964,3 +964,28 @@ matching how that repo's own `docs/COWORK.md` describes installing it to
 `~/go/bin`) -- not yet confirmed this actually renders lambada's real
 `go test -v` output correctly, only `gorderly`'s own suite and the
 `spec-demo` translation have been confirmed against it so far.
+
+## This session: migrating `cmd/lambada-mta`'s tests off Ginkgo/Gomega too
+
+Same pattern as `cmd/lambada-web` above, applied to `attachments_test.go`
+(one file, one top-level `Describe("Attachments", ...)`) and
+`main_suite_test.go` (deleted -- same reasoning as `lambada-web`'s: no
+shared `RunSpecs` entry point needed once each package's own
+`func TestXxx(t *testing.T)` is independent). Kept the test function named
+`TestAttachments`, not `TestLambadaMTA` -- there's only one top-level group
+in this package, so `Test<TopLevelName>` (matching every `lambada-web` file)
+reads more consistently than reusing the old suite-level name.
+
+This file's real Gomega usage needed two matchers `lambada-web`'s migration
+never touched: `BeADirectory()` (`checkAttachmentDir`'s tests check a real
+directory, not just an existing path) and `Panic()` (`Expect(func(){...}).NotTo(Panic())`,
+checking `checkAttachmentDir` doesn't panic on a pre-existing directory or a
+symlink) -- both added to `~/workspace/expect` this session (see its own
+`docs/COWORK.md`). Every `BeNil()` call site in this file turned out to be
+checking an `error` (`Expect(err).To(BeNil())`), so those became
+`expect.Succeed()`, not a new general `BeNil` matcher.
+
+Same verification gap as `lambada-web`: no Go toolchain in this sandbox,
+not yet run for real. `go mod tidy && go test -v ./cmd/lambada-mta/...`
+covers this package once you're back on your Mac -- same command block as
+`lambada-web`'s, since both packages share one `go.mod`.

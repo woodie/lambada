@@ -6,10 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/sclevine/spec"
+	"github.com/woodie/expect"
 )
 
 var plainMessage = "From: sender@example.com\r\n" +
@@ -39,166 +40,172 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 	"\r\n" + base64.StdEncoding.EncodeToString([]byte("fake pdf content")) + "\r\n" +
 	"--boundary--\r\n"
 
-var _ = Describe("Attachments", func() {
+func TestAttachments(t *testing.T) {
+	spec.Run(t, "Attachments", func(t *testing.T, describe spec.Describe, it spec.S) {
+		it.Before(func() { attachmentDir = it.T().TempDir() }) // stub implementation
 
-	BeforeEach(func() { attachmentDir = GinkgoT().TempDir() }) // stub implementation
+		describe("checkAttachmentDir", func() {
+			context := describe
 
-	Describe("checkAttachmentDir", func() {
-		Context("when the path is missing", func() {
-			It("creates the directory", func() {
-				attachmentDir = filepath.Join(GinkgoT().TempDir(), "newdir")
-				checkAttachmentDir()
-				Expect(attachmentDir).To(BeADirectory())
+			context("when the path is missing", func() {
+				it("creates the directory", func() {
+					attachmentDir = filepath.Join(it.T().TempDir(), "newdir")
+					checkAttachmentDir()
+					expect.That(t, attachmentDir).To(expect.BeADirectory())
+				})
+			})
+
+			context("when the path is a real directory", func() {
+				it("does not error", func() {
+					attachmentDir = it.T().TempDir()
+					expect.That(t, func() { checkAttachmentDir() }).NotTo(expect.Panic())
+				})
+			})
+
+			context("when the path is a symlink", func() {
+				it("does not error", func() {
+					target := it.T().TempDir()
+					attachmentDir = filepath.Join(it.T().TempDir(), "link")
+					_ = os.Symlink(target, attachmentDir)
+					expect.That(t, func() { checkAttachmentDir() }).NotTo(expect.Panic())
+				})
 			})
 		})
 
-		Context("when the path is a real directory", func() {
-			It("does not error", func() {
-				attachmentDir = GinkgoT().TempDir()
-				Expect(func() { checkAttachmentDir() }).NotTo(Panic())
+		describe("cleanupOldFiles", func() {
+			context := describe
+			var pdf, dss, dir string
+
+			it.Before(func() {
+				pdf = filepath.Join(attachmentDir, "1234567890.pdf")
+				_ = os.WriteFile(pdf, []byte("data"), 0644)
+				dss = filepath.Join(attachmentDir, ".DS_Store")
+				_ = os.WriteFile(dss, []byte("data"), 0644)
+				dir = filepath.Join(attachmentDir, "subdir")
+				_ = os.Mkdir(dir, 0755)
+			})
+
+			context("when entries are recent", func() {
+				it("keeps the PDF file", func() {
+					cleanupOldFiles()
+					expect.That(t, pdf).To(expect.BeAnExistingFile())
+				})
+			})
+
+			context("when entries are older", func() {
+				it.Before(func() {
+					old := time.Now().Add(-25 * time.Hour)
+					_ = os.Chtimes(pdf, old, old)
+					_ = os.Chtimes(dir, old, old)
+					_ = os.Chtimes(dss, old, old)
+				})
+
+				it("deletes the PDF file", func() {
+					cleanupOldFiles()
+					expect.That(t, pdf).NotTo(expect.BeAnExistingFile())
+				})
+				it("keeps the .DS_Store", func() {
+					cleanupOldFiles()
+					expect.That(t, dss).To(expect.BeAnExistingFile())
+				})
+				it("keeps the directory", func() {
+					cleanupOldFiles()
+					expect.That(t, dir).To(expect.BeADirectory())
+				})
 			})
 		})
 
-		Context("when the path is a symlink", func() {
-			It("does not error", func() {
-				target := GinkgoT().TempDir()
-				attachmentDir = filepath.Join(GinkgoT().TempDir(), "link")
-				_ = os.Symlink(target, attachmentDir)
-				Expect(func() { checkAttachmentDir() }).NotTo(Panic())
+		describe("processAttachments", func() {
+			context := describe
+			var err error
+
+			processMessage := func(raw string) {
+				msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
+				expect.That(t, msgErr).To(expect.Succeed())
+				err = processAttachments(msg)
+			}
+
+			context("when the message is not multipart", func() {
+				it.Before(func() { processMessage(plainMessage) })
+
+				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("saves no files", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, len(entries)).To(expect.Equal(0))
+				})
+			})
+
+			context("when the message has only inline parts", func() {
+				it.Before(func() { processMessage(inlineMessage) })
+
+				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("saves no files", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, len(entries)).To(expect.Equal(0))
+				})
+			})
+
+			context("when the message has an attachment", func() {
+				it.Before(func() { processMessage(multipartMessage) })
+
+				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("saves one file", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, len(entries)).To(expect.Equal(1))
+				})
+				it("preserves the file extension", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, filepath.Ext(entries[0].Name())).To(expect.Equal(".txt"))
+				})
+				it("preserves the file content", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
+					expect.That(t, string(data)).To(expect.Equal("file content"))
+				})
+			})
+
+			context("when the message has a base64-encoded PDF attachment", func() {
+				it.Before(func() { processMessage(base64PdfMessage) })
+
+				it("returns no error", func() { expect.That(t, err).To(expect.Succeed()) })
+				it("saves one file", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, len(entries)).To(expect.Equal(1))
+				})
+				it("preserves the file extension", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					expect.That(t, filepath.Ext(entries[0].Name())).To(expect.Equal(".pdf"))
+				})
+				it("decodes the base64 content correctly", func() {
+					entries, _ := os.ReadDir(attachmentDir)
+					data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
+					expect.That(t, string(data)).To(expect.Equal("fake pdf content"))
+				})
+			})
+		})
+
+		describe("saveAttachment", func() {
+			context := describe
+			var path string
+
+			context("when the path is valid", func() {
+				it.Before(func() { path = filepath.Join(attachmentDir, "test.pdf") })
+
+				it("writes the content to disk", func() {
+					expect.That(t, saveAttachment(strings.NewReader("fake pdf content"), path)).To(expect.Succeed())
+					data, err := os.ReadFile(path)
+					expect.That(t, err).To(expect.Succeed())
+					expect.That(t, string(data)).To(expect.Equal("fake pdf content"))
+				})
+			})
+
+			context("when the path is invalid", func() {
+				it.Before(func() { path = "/nonexistent/dir/file.pdf" })
+
+				it("returns an error", func() {
+					expect.That(t, saveAttachment(strings.NewReader("data"), path)).To(expect.HaveOccurred())
+				})
 			})
 		})
 	})
-
-	Describe("cleanupOldFiles", func() {
-		var pdf, dss, dir string
-
-		BeforeEach(func() {
-			pdf = filepath.Join(attachmentDir, "1234567890.pdf")
-			_ = os.WriteFile(pdf, []byte("data"), 0644)
-			dss = filepath.Join(attachmentDir, ".DS_Store")
-			_ = os.WriteFile(dss, []byte("data"), 0644)
-			dir = filepath.Join(attachmentDir, "subdir")
-			_ = os.Mkdir(dir, 0755)
-		})
-
-		Context("when entries are recent", func() {
-			It("keeps the PDF file", func() {
-				cleanupOldFiles()
-				Expect(pdf).To(BeAnExistingFile())
-			})
-		})
-
-		Context("when entries are older", func() {
-			BeforeEach(func() {
-				old := time.Now().Add(-25 * time.Hour)
-				_ = os.Chtimes(pdf, old, old)
-				_ = os.Chtimes(dir, old, old)
-				_ = os.Chtimes(dss, old, old)
-			})
-
-			It("deletes the PDF file", func() {
-				cleanupOldFiles()
-				Expect(pdf).NotTo(BeAnExistingFile())
-			})
-			It("keeps the .DS_Store", func() {
-				cleanupOldFiles()
-				Expect(dss).To(BeAnExistingFile())
-			})
-			It("keeps the directory", func() {
-				cleanupOldFiles()
-				Expect(dir).To(BeADirectory())
-			})
-		})
-	})
-
-	Describe("processAttachments", func() {
-		var err error
-
-		processMessage := func(raw string) {
-			msg, msgErr := mail.ReadMessage(strings.NewReader(raw))
-			Expect(msgErr).To(BeNil())
-			err = processAttachments(msg)
-		}
-
-		Context("when the message is not multipart", func() {
-			BeforeEach(func() { processMessage(plainMessage) })
-
-			It("returns no error", func() { Expect(err).To(BeNil()) })
-			It("saves no files", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(entries).To(BeEmpty())
-			})
-		})
-
-		Context("when the message has only inline parts", func() {
-			BeforeEach(func() { processMessage(inlineMessage) })
-
-			It("returns no error", func() { Expect(err).To(BeNil()) })
-			It("saves no files", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(entries).To(BeEmpty())
-			})
-		})
-
-		Context("when the message has an attachment", func() {
-			BeforeEach(func() { processMessage(multipartMessage) })
-
-			It("returns no error", func() { Expect(err).To(BeNil()) })
-			It("saves one file", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(entries).To(HaveLen(1))
-			})
-			It("preserves the file extension", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(filepath.Ext(entries[0].Name())).To(Equal(".txt"))
-			})
-			It("preserves the file content", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
-				Expect(string(data)).To(Equal("file content"))
-			})
-		})
-
-		Context("when the message has a base64-encoded PDF attachment", func() {
-			BeforeEach(func() { processMessage(base64PdfMessage) })
-
-			It("returns no error", func() { Expect(err).To(BeNil()) })
-			It("saves one file", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(entries).To(HaveLen(1))
-			})
-			It("preserves the file extension", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				Expect(filepath.Ext(entries[0].Name())).To(Equal(".pdf"))
-			})
-			It("decodes the base64 content correctly", func() {
-				entries, _ := os.ReadDir(attachmentDir)
-				data, _ := os.ReadFile(filepath.Join(attachmentDir, entries[0].Name()))
-				Expect(string(data)).To(Equal("fake pdf content"))
-			})
-		})
-	})
-
-	Describe("saveAttachment", func() {
-		var path string
-
-		Context("when the path is valid", func() {
-			BeforeEach(func() { path = filepath.Join(attachmentDir, "test.pdf") })
-
-			It("writes the content to disk", func() {
-				Expect(saveAttachment(strings.NewReader("fake pdf content"), path)).To(Succeed())
-				data, err := os.ReadFile(path)
-				Expect(err).To(BeNil())
-				Expect(string(data)).To(Equal("fake pdf content"))
-			})
-		})
-
-		Context("when the path is invalid", func() {
-			BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
-
-			It("returns an error", func() {
-				Expect(saveAttachment(strings.NewReader("data"), path)).To(HaveOccurred())
-			})
-		})
-	})
-})
+}
