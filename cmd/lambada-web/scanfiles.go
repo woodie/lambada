@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,30 +18,38 @@ type scan struct {
 	Size int64
 }
 
-// Resolve filename to a path within scanDir
-func scanFilesPath(filename string) (path string, ok bool) {
+// Resolve filename to a path within scanDir; a not-found name/file/directory returns os.ErrNotExist, any other stat failure is logged and returned as-is.
+func scanFilesPath(filename string) (path string, err error) {
 	name := filepath.Base(filename)
 	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
-		return "", false
+		return "", os.ErrNotExist
 	}
 
 	path = filepath.Join(scanDir, name)
 	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
-		return "", false
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("stat %s: %v", path, err)
+		}
+		return "", err
+	}
+	if info.IsDir() {
+		return "", os.ErrNotExist
 	}
 
-	return path, true
+	return path, nil
 }
 
 // scanFilesListing returns every *.pdf file in dir, newest filename first (epoch filenames sort lexicographically).
 func scanFilesListing(dir string) ([]scan, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.pdf"))
+	scans := make([]scan, 0, len(matches))
 	if err != nil {
-		return nil, fmt.Errorf("glob %s: %w", dir, err)
+		err = fmt.Errorf("glob %s: %w", dir, err)
+		log.Printf("%v", err)
+		return scans, err
 	}
 
-	scans := make([]scan, 0, len(matches))
 	for _, path := range matches {
 		info, err := os.Stat(path)
 		if err != nil {

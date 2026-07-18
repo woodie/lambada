@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -44,6 +45,65 @@ var _ = Describe("ScanFiles", func() {
 			Expect(scans).To(HaveLen(2))
 			Expect(scans[0].Name).To(Equal("2000000000.pdf"))
 			Expect(scans[1].Name).To(Equal("1000000000.pdf"))
+		})
+
+		It("returns an error for a malformed glob pattern", func() {
+			// "[" is an unterminated bracket expression -- filepath.Glob's only error case (ErrBadPattern).
+			_, err := scanFilesListing(filepath.Join(dir, "["))
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("scanFilesPath", func() {
+		BeforeEach(func() {
+			scanDir = GinkgoT().TempDir()
+		})
+
+		It("resolves an existing file", func() {
+			Expect(os.WriteFile(filepath.Join(scanDir, "1234567890.pdf"), []byte("content"), 0o644)).To(Succeed())
+
+			path, err := scanFilesPath("1234567890.pdf")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(path).To(Equal(filepath.Join(scanDir, "1234567890.pdf")))
+		})
+
+		It("returns os.ErrNotExist for a missing file", func() {
+			_, err := scanFilesPath("missing.pdf")
+			Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
+		})
+
+		It("returns os.ErrNotExist for a directory", func() {
+			Expect(os.Mkdir(filepath.Join(scanDir, "subdir"), 0o755)).To(Succeed())
+
+			_, err := scanFilesPath("subdir")
+			Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
+		})
+
+		DescribeTable("returns os.ErrNotExist for an invalid or unresolvable filename",
+			func(filename string) {
+				_, err := scanFilesPath(filename)
+				Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
+			},
+			Entry("empty", ""),
+			Entry("current dir", "."),
+			Entry("parent dir", ".."),
+			// filepath.Base already strips any directory component before scanFilesPath sees it, so this just resolves to a nonexistent base name in scanDir.
+			Entry("path with a directory prefix", "sub/1234567890.pdf"),
+		)
+
+		It("returns a non-ErrNotExist error when the directory can't be searched", func() {
+			if os.Geteuid() == 0 {
+				Skip("running as root; permission checks don't apply")
+			}
+			Expect(os.WriteFile(filepath.Join(scanDir, "1234567890.pdf"), []byte("content"), 0o644)).To(Succeed())
+			Expect(os.Chmod(scanDir, 0o000)).To(Succeed())
+			defer func() {
+				Expect(os.Chmod(scanDir, 0o755)).To(Succeed())
+			}()
+
+			_, err := scanFilesPath("1234567890.pdf")
+			Expect(err).To(HaveOccurred())
+			Expect(errors.Is(err, os.ErrNotExist)).To(BeFalse())
 		})
 	})
 

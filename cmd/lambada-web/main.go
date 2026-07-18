@@ -4,6 +4,7 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -43,30 +44,18 @@ var listingTemplate = template.Must(
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Route to list all available files
+	// Route to list all available files -- a listing error is treated as no files, not a failed request
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		scans, err := scanFilesListing(scanDir)
-		if err != nil {
-			log.Printf("listing error: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
-			return
-		}
-
+		scans, _ := scanFilesListing(scanDir)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := listingTemplate.Execute(w, listingData{Listing: scans}); err != nil {
 			log.Printf("template error: %v", err)
 		}
 	})
 
-	// Route to JSON list of files (for zouk client)
+	// Route to JSON list of files (for zouk client) -- a listing error is treated as no files, not a failed request
 	mux.HandleFunc("GET /files.json", func(w http.ResponseWriter, r *http.Request) {
-		scans, err := scanFilesListing(scanDir)
-		if err != nil {
-			log.Printf("listing error: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
-			return
-		}
-
+		scans, _ := scanFilesListing(scanDir)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(toScansJSON(scans)); err != nil {
 			log.Printf("json encode error: %v", err)
@@ -75,29 +64,30 @@ func newMux() *http.ServeMux {
 
 	// Route to download a specific file
 	mux.HandleFunc("GET /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilesPath(r.PathValue("filename"))
-		if !ok {
+		path, err := scanFilesPath(r.PathValue("filename"))
+		if errors.Is(err, os.ErrNotExist) {
 			http.Error(w, "File not found", http.StatusNotFound) // 404
-			return
+		} else if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
+		} else {
+			w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
+			http.ServeFile(w, r, path)
 		}
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(path)))
-		http.ServeFile(w, r, path)
 	})
 
 	// Route to delete a specific file
 	mux.HandleFunc("DELETE /download/{filename}", func(w http.ResponseWriter, r *http.Request) {
-		path, ok := scanFilesPath(r.PathValue("filename"))
-		if !ok {
+		path, err := scanFilesPath(r.PathValue("filename"))
+		if errors.Is(err, os.ErrNotExist) {
 			http.Error(w, "File not found", http.StatusNotFound) // 404
-			return
-		}
-
-		if err := os.Remove(path); err != nil {
+		} else if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
+		} else if err := os.Remove(path); err != nil {
 			log.Printf("delete error: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError) // 500
-			return
+		} else {
+			w.WriteHeader(http.StatusNoContent) // 204
 		}
-		w.WriteHeader(http.StatusNoContent) // 204
 	})
 
 	// Catch-all pattern to fetch static content
@@ -123,7 +113,7 @@ func main() {
 	}
 
 	log.Printf("lambada-web listening on %s, serving %s", listenAddr, scanDir)
-	if err := newServer(listenAddr, newMux()).ListenAndServe(); err != nil {
+	if err := newServer(listenAddr, withLogging(newMux())).ListenAndServe(); err != nil {
 		log.Fatalf("HTTP server error: %v", err)
 	}
 }

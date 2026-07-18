@@ -120,6 +120,25 @@ var _ = Describe("Lambada WEB", func() {
 				Expect(rec.Header().Get("Content-Disposition")).To(ContainSubstring(file))
 			})
 		})
+
+		Context("when the directory can't be searched (permission error)", func() {
+			BeforeEach(func() {
+				if os.Geteuid() == 0 {
+					Skip("running as root; permission checks don't apply")
+				}
+				writeFile()
+				Expect(os.Chmod(scanDir, 0o000)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.Chmod(scanDir, 0o755)).To(Succeed())
+			})
+
+			It("responds with 500", func() {
+				rec := get(mux, "/download/"+file)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+			})
+		})
 	})
 
 	// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
@@ -144,6 +163,25 @@ var _ = Describe("Lambada WEB", func() {
 				del(mux, "/download/"+file)
 				rec := get(mux, "/download/"+file)
 				Expect(rec.Code).To(Equal(http.StatusNotFound))
+			})
+		})
+
+		Context("when the directory can't be searched (permission error)", func() {
+			BeforeEach(func() {
+				if os.Geteuid() == 0 {
+					Skip("running as root; permission checks don't apply")
+				}
+				writeFile()
+				Expect(os.Chmod(scanDir, 0o000)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.Chmod(scanDir, 0o755)).To(Succeed())
+			})
+
+			It("responds with 500", func() {
+				rec := del(mux, "/download/"+file)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
 			})
 		})
 	})
