@@ -43,12 +43,11 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 func TestAttachments(t *testing.T) {
 	spec.Run(t, "Attachments", func(t *testing.T, describe spec.Describe, it spec.S) {
 		before := it.Before
+		context := describe.AsContext()
 
 		before(func() { attachmentDir = it.T().TempDir() }) // stub implementation
 
 		describe("checkAttachmentDir", func() {
-			context := describe.AsContext()
-
 			context("when the path is missing", func() {
 				it("creates the directory", func() {
 					attachmentDir = filepath.Join(it.T().TempDir(), "newdir")
@@ -75,7 +74,6 @@ func TestAttachments(t *testing.T) {
 		})
 
 		describe("cleanupOldFiles", func() {
-			context := describe.AsContext()
 			var pdf, dss, dir string
 
 			before(func() {
@@ -118,7 +116,6 @@ func TestAttachments(t *testing.T) {
 		})
 
 		describe("processAttachments", func() {
-			context := describe.AsContext()
 			var err error
 
 			processMessage := func(raw string) {
@@ -187,7 +184,6 @@ func TestAttachments(t *testing.T) {
 		})
 
 		describe("saveAttachment", func() {
-			context := describe.AsContext()
 			var path string
 
 			context("when the path is valid", func() {

@@ -1012,3 +1012,20 @@ its `Before`/`After` methods got the shorthand, since dropping `it` from
 exactly the design `spec` (and this fork) deliberately avoids. Applied to
 every already-migrated file: `scanfiles_test.go`/`main_test.go`
 (`lambada-web`) and `attachments_test.go` (`lambada-mta`).
+
+Follow-up correction, same session: `main_test.go`/`attachments_test.go`
+originally redeclared `context := describe.AsContext()` inside every
+top-level `describe(...)` block, mirroring Ginkgo's per-block feel too
+literally. Unnecessary -- `describe`/`context`/`it`/`before`/`after` are
+the same five values for the entire file regardless of nesting depth, and
+Go closures already see every enclosing scope's locals at any depth. Moved
+all five declarations (well, three: `describe`/`it` come from `spec.Run`'s
+own callback params) to one spot at the very top of each file's
+`spec.Run(...)` body; every nested block now just uses them via ordinary
+closure capture, no re-declaration anywhere. This is the actual fix for
+"can we hide these so they just work always" -- within `spec`'s
+no-global-state design, one declaration per file is as automatic as it
+gets without changing `G`/`S`'s function signatures to inject fresh
+`describe`/`context`/`it`/`before`/`after` values into every nested
+closure's own parameters, which would be a much larger, likely
+non-upstreamable redesign, not attempted here.

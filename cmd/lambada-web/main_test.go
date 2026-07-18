@@ -34,6 +34,7 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 func TestLambadaWeb(t *testing.T) {
 	spec.Run(t, "Lambada WEB", func(t *testing.T, describe spec.Describe, it spec.S) {
 		before, after := it.Before, it.After
+		context := describe.AsContext()
 
 		var mux *http.ServeMux
 		var file string
@@ -50,8 +51,6 @@ func TestLambadaWeb(t *testing.T) {
 		}
 
 		describe("GET /", func() {
-			context := describe.AsContext()
-
 			context("with no files", func() {
 				it("renders the empty state", func() {
 					rec := get(mux, "/")
@@ -108,8 +107,6 @@ func TestLambadaWeb(t *testing.T) {
 		})
 
 		describe("GET /download/{filename}", func() {
-			context := describe.AsContext()
-
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := get(mux, "/download/"+file)
@@ -148,8 +145,6 @@ func TestLambadaWeb(t *testing.T) {
 
 		// DELETE /download/{filename} is the RESTful counterpart to GET on the same route, not a separate "/delete" route.
 		describe("DELETE /download/{filename}", func() {
-			context := describe.AsContext()
-
 			context("when the file is missing", func() {
 				it("responds with 404", func() {
 					rec := del(mux, "/download/"+file)
@@ -193,8 +188,6 @@ func TestLambadaWeb(t *testing.T) {
 		})
 
 		describe("GET /files.json", func() {
-			context := describe.AsContext()
-
 			context("with no files", func() {
 				it("returns an empty array", func() {
 					rec := get(mux, "/files.json")
