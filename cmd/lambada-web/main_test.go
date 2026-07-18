@@ -12,6 +12,8 @@ import (
 
 	"github.com/sclevine/spec"
 	"github.com/woodie/expect"
+
+	"lambada/internal/spectest"
 )
 
 // get performs an in-process GET against newMux() without binding a real listener.
@@ -32,9 +34,7 @@ func del(mux *http.ServeMux, path string) *httptest.ResponseRecorder {
 
 // TestLambadaWeb exercises the HTTP routes (scanfiles_test.go/server_test.go have their own test files).
 func TestLambadaWeb(t *testing.T) {
-	spec.Run(t, "Lambada WEB", func(t *testing.T, describe spec.Describe, it spec.S) {
-		before, after, context := it.Before, it.After, describe.AsContext()
-
+	spectest.Run(t, "Lambada WEB", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
 		var mux *http.ServeMux
 		var file string
 

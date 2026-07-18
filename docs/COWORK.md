@@ -1034,3 +1034,38 @@ Combined further into one multiple-assignment line per file (`before,
 after, context := it.Before, it.After, describe.AsContext()`, or `before,
 context := it.Before, describe.AsContext()` where `after`'s unused) --
 plain Go, no `spec` involvement either way.
+
+Then bundled into `spec.Aliases(describe, it) (before, after func(func()),
+context G)`, added to `~/workspace/spec` itself (one function, returns the
+same three values). Still one line per file, though: `before, after,
+context := spec.Aliases(describe, it)`.
+
+**Then actually eliminated per-file, Ruby-`spec_helper`-style**, per
+woodie's own framing: "we just want it to work always without having to
+type it... in ruby we put things in spec_helper." `spec.Aliases` can't be
+hoisted to a package-level var the way RSpec's global config can, since
+`describe`/`it` are freshly scoped to each `TestXxx`'s own `spec.Run` call
+-- there's no ambient global "current suite" the way RSpec's `world` object
+gives every spec file for free. The actual Go equivalent: a new
+`internal/spectest` package (`spectest.go`, one function, `Run` wrapping
+`spec.Run` + `spec.Aliases`) that both `cmd/lambada-web` and
+`cmd/lambada-mta` import -- this account's `spec_helper.rb` equivalent,
+sitting at the project layer (not inside `spec` itself, same way a Ruby
+project's own `spec_helper.rb` isn't part of the `rspec` gem). Every
+migrated file now takes `describe`/`context`/`it`/`before`/`after`
+straight as callback parameters:
+
+```go
+spectest.Run(t, "Lambada WEB", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
+	...
+})
+```
+
+No declaration line anywhere, in any file, at any nesting depth --
+`middleware_test.go`/`server_test.go` keep plain `spec.Run` since they
+never needed `before`/`after`/`context` at all, so routing them through
+`spectest.Run` would only add unused-parameter noise for no benefit.
+`internal/spectest` only existing now (not extracted preemptively) matches
+this account's stated bar from issue #17's `docs/COWORK.md` entry above:
+wait for a second real consumer, and `lambada-web`/`lambada-mta` are both
+real, right now.

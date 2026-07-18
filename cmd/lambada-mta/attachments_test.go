@@ -11,6 +11,8 @@ import (
 
 	"github.com/sclevine/spec"
 	"github.com/woodie/expect"
+
+	"lambada/internal/spectest"
 )
 
 var plainMessage = "From: sender@example.com\r\n" +
@@ -41,9 +43,7 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 	"--boundary--\r\n"
 
 func TestAttachments(t *testing.T) {
-	spec.Run(t, "Attachments", func(t *testing.T, describe spec.Describe, it spec.S) {
-		before, context := it.Before, describe.AsContext()
-
+	spectest.Run(t, "Attachments", func(t *testing.T, describe, context spec.Describe, it spec.S, before, _ func(func())) {
 		before(func() { attachmentDir = it.T().TempDir() }) // stub implementation
 
 		describe("checkAttachmentDir", func() {
