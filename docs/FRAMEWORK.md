@@ -113,3 +113,52 @@ still the only Go HTTP service in this account, so there was never a
 second consumer to justify a shared package -- same reasoning as issue
 #6's nginx discussion. See `docs/COWORK.md`'s session entries for the
 implementation details.
+
+## Narrow helpers worth pulling in for a future template
+
+Revisiting this with a different question -- not "does `lambada-web` need
+a framework" but "what would we not want to hand-roll again if this repo's
+shape becomes the starting point for the next Go web project" -- turned up
+two real candidates. Both fit the "narrow, app-specific-shaped primitive"
+category above, not the router/framework space this doc otherwise argues
+against: small, single-purpose, still plain `net/http`.
+
+**Static files: still no gap.** `embed` + `fs.Sub` + `http.FileServerFS`
+already is the small, focused answer -- nothing to add here, this section
+of the original question stays closed.
+
+**`middleware.go`'s `withLogging`/`statusRecorder` doesn't forward optional
+`http.ResponseWriter` interfaces.** It only embeds `http.ResponseWriter`
+and overrides `WriteHeader`, so `http.Flusher`, `http.Hijacker`, and
+`http.CloseNotifier` type assertions on the wrapped writer silently fail
+even when the real writer supports them. Harmless today -- no handler here
+streams or hijacks a connection -- but a future project built from this
+template that adds SSE or WebSockets would hit a broken type assertion the
+moment it tried one. [`github.com/felixge/httpsnoop`](https://github.com/felixge/httpsnoop)
+exists specifically for this: `httpsnoop.Wrap` returns a wrapper
+implementing the exact same interface combination as the original
+`ResponseWriter` -- still just `net/http`, still one purpose.
+
+**`listingTemplate.Execute(w, ...)` in `main.go` writes directly to the
+live response as it renders**, so a mid-template failure leaves a partial
+`200` on the wire instead of a clean `500` -- a gap flagged in passing
+while working on `newMux`, not fixed. The standard small-library answer is
+[`github.com/oxtoacart/bpool`](https://github.com/oxtoacart/bpool):
+execute the template (or JSON-encode) into a pooled `bytes.Buffer` first,
+check the error, only then copy to the real `ResponseWriter`. About 100
+lines, one documented use case, no framework attached. A hand-rolled
+`sync.Pool`-of-`bytes.Buffer` gets the same result without the dependency
+-- reasonable either way; the library mainly saves re-deriving the
+pool-sizing edge cases.
+
+**`server.go`'s `newServer` timeout defaults are not a library
+candidate.** Four struct fields and a constructor is too small to justify
+a dependency for -- more suited to being a copied pattern across future
+projects (the way the `humane`/Makefile conventions already get copied
+across sibling repos) than a shared package.
+
+Neither `httpsnoop` nor `bpool` has actually been pulled into `lambada-web`
+as of this writing -- `newMux`'s template/JSON paths still write straight
+to `w`, and `withLogging` is still the hand-rolled version. Revisit if
+either gap actually bites in practice, and start from here for the next
+Go web project regardless.
