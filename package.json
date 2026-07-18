@@ -4,12 +4,13 @@
   "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/ginkgo)",
   "scripts": {
     "test": "vitest run && ginkgo-fd -r",
-    "lint-js": "standard",
+    "lint-js": "standard --fix",
     "test-js": "vitest run",
-    "lint-go": "golangci-lint run",
+    "lint-go": "golangci-lint run --fix",
     "test-go": "ginkgo-fd -r",
     "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
-    "check": "npm run lint-js && vitest run --reporter=dot && npm run lint-go && LOG_LEVEL=OFF ginkgo -r && npm run lint-html"
+    "format-go": "go fmt ./...",
+    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 ginkgo -r && npm run lint-html"
   },
   "devDependencies": {
     "html-validate": "^11.5.6",
