@@ -25,4 +25,4 @@ require (
 	golang.org/x/tools v0.44.0 // indirect
 )
 
-replace github.com/sclevine/spec => ../spec
+replace github.com/sclevine/spec => github.com/woodie/spec v0.1.0
