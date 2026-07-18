@@ -9,13 +9,11 @@ import (
 
 	"github.com/sclevine/spec"
 	"github.com/woodie/expect"
-
-	"lambada/internal/spectest"
 )
 
 // TestScanFiles exercises scanFilesListing/toScansJSON, the Go port of Ruby's ScanFiles#listing/#scans_json.
 func TestScanFiles(t *testing.T) {
-	spectest.Run(t, "ScanFiles", func(t *testing.T, describe, _ spec.Describe, it spec.S, before, _ func(func())) {
+	spec.RunAliased(t, "ScanFiles", func(t *testing.T, describe, _ spec.Describe, it spec.S, before, _ func(func())) {
 		describe("scanFilesListing", func() {
 			var dir string
 			before(func() { dir = it.T().TempDir() })

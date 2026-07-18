@@ -1046,26 +1046,25 @@ type it... in ruby we put things in spec_helper." `spec.Aliases` can't be
 hoisted to a package-level var the way RSpec's global config can, since
 `describe`/`it` are freshly scoped to each `TestXxx`'s own `spec.Run` call
 -- there's no ambient global "current suite" the way RSpec's `world` object
-gives every spec file for free. The actual Go equivalent: a new
-`internal/spectest` package (`spectest.go`, one function, `Run` wrapping
-`spec.Run` + `spec.Aliases`) that both `cmd/lambada-web` and
-`cmd/lambada-mta` import -- this account's `spec_helper.rb` equivalent,
-sitting at the project layer (not inside `spec` itself, same way a Ruby
-project's own `spec_helper.rb` isn't part of the `rspec` gem). Every
-migrated file now takes `describe`/`context`/`it`/`before`/`after`
-straight as callback parameters:
+gives every spec file for free.
+
+First attempt put the wrapper in a new `lambada`-only `internal/spectest`
+package, reasoning it was project-specific the way `spec_helper.rb` is.
+Corrected same session: this isn't project-specific at all, it's a pure
+`spec`-level convenience with nothing about `lambada` baked in, so it
+belongs in `~/workspace/spec` itself where every consumer of
+`github.com/woodie/spec` gets it for free -- `spec.RunAliased` (see
+`spec`'s own `docs/COWORK.md`), wrapping `Run` + `Aliases`.
+`internal/spectest` deleted; every migrated file now calls `spec.RunAliased`
+directly, still getting `describe`/`context`/`it`/`before`/`after` as plain
+callback parameters with zero declaration line:
 
 ```go
-spectest.Run(t, "Lambada WEB", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
+spec.RunAliased(t, "Lambada WEB", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
 	...
 })
 ```
 
-No declaration line anywhere, in any file, at any nesting depth --
 `middleware_test.go`/`server_test.go` keep plain `spec.Run` since they
-never needed `before`/`after`/`context` at all, so routing them through
-`spectest.Run` would only add unused-parameter noise for no benefit.
-`internal/spectest` only existing now (not extracted preemptively) matches
-this account's stated bar from issue #17's `docs/COWORK.md` entry above:
-wait for a second real consumer, and `lambada-web`/`lambada-mta` are both
-real, right now.
+never needed `before`/`after`/`context` at all -- routing them through
+`RunAliased` would only add unused-parameter noise for no benefit.
