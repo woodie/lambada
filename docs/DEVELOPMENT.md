@@ -20,8 +20,16 @@ see "Configuration" and "systemd Services" below.
 ## Dependencies
 
 - [`github.com/emersion/go-smtp`](https://github.com/emersion/go-smtp) -- SMTP server primitives (lambada-mta)
-- [`github.com/onsi/ginkgo/v2`](https://github.com/onsi/ginkgo) -- BDD test framework
-- [`github.com/onsi/gomega`](https://github.com/onsi/gomega) -- matcher library for Ginkgo
+- [`github.com/sclevine/spec`](https://github.com/sclevine/spec) -- test
+  organization (`describe`/`context`/`it`), replaced in `go.mod` with
+  [`github.com/woodie/spec`](https://github.com/woodie/spec) (a fork
+  adding generics/`t.Context()` support; tracks
+  [sclevine/spec#18](https://github.com/sclevine/spec/pull/18) upstream,
+  drop the `replace` line once/if that merges)
+- [`github.com/woodie/expect`](https://github.com/woodie/expect) --
+  Gomega-style matcher library, generics-based, dot-imported in test files
+- [`github.com/woodie/humane`](https://github.com/woodie/humane) --
+  `HumanSize`/`TimeAgo` formatting, used by `lambada-web`'s listing template
 
 `lambada-web` only uses the standard library (`net/http`, `html/template`,
 `embed`).
@@ -75,16 +83,17 @@ configurability:
 - `lambada-web`'s `listenAddr`, overridden by `LAMBADA_WEB_LISTEN_ADDR` --
   added specifically so the nginx-vs-direct choice further down is a
   one-line, no-rebuild switch rather than a code edit.
-- `LAMBADA_QUIET`, read directly (no backing `var`) by both binaries'
-  `init()`: set to any non-empty value to redirect all `log.Printf`/
-  `log.Fatalf` output to `io.Discard`. Not a runtime knob for production
-  use -- it exists so `ginkgo -r` doesn't drown its pass/fail dots in every
-  handler's log lines when run from `check` (see "Linting and Testing"
-  below).
+- `LOG_QUIET`, read directly (no backing `var`) by both binaries' `init()`:
+  set to any non-empty value to redirect all `log.Printf`/`log.Fatalf`
+  output to `io.Discard`. Not a runtime knob for production use -- it
+  exists so `go test`'s own output (rendered by `gorderly`, see "Linting
+  and Testing" below) doesn't get buried in every handler's log lines when
+  run from `check`.
 
 ## Linting and Testing
 
-Go (golangci-lint, ginkgo) and the browser JS in
+Go (golangci-lint, `go test` rendered through
+[`gorderly`](https://github.com/woodie/gorderly)) and the browser JS in
 `cmd/lambada-web/static/script.js` (standard, vitest) each have their own
 toolchain, wired together with a handful of npm scripts so there's one
 place to remember the commands from:
@@ -92,35 +101,43 @@ place to remember the commands from:
 ```bash
 npm install           # JS devDependencies (first time only)
 
-npm run lint-js        # standard
-npm run test-js        # vitest run (documentation-style output)
-npm run lint-go         # golangci-lint run
-npm run test-go        # ginkgo-fd -r (documentation-style output)
+npm run lint-js        # standard --fix
+npm run test-js        # vitest run
+npm run lint-go         # golangci-lint run --fix
+npm run test-go        # go test -v ./... | gorderly -fd (documentation-style output)
+npm run format-go       # go fmt ./...
+npm run lint-html       # html-validate --ext=tmpl cmd/lambada-web/views/
 
-npm run check          # all four, in order, stops at the first failure
+npm run check          # standard, vitest, golangci-lint, go test, lint-html -- stops at the first failure
 ```
 
-`npm run check` runs the same four checks split across `ci.yml`'s
-`golangci-lint` and `javascript` jobs -- run it locally before pushing to
-catch what CI would catch. It uses `vitest run --reporter=dot` and plain
-`ginkgo -r` (dots per spec, Ginkgo's default reporter) instead of
-`test-js`/`test-go`'s documentation-style output, so running all four
-together stays compact -- reach for `test-js`/`test-go` directly when you
-want the full describe/context/it breakdown. It also sets `LAMBADA_QUIET=1`
-for the `ginkgo -r` step, so the dots aren't buried in every handler's
-`log.Printf` output (see "Configuration" above) -- `test-go`/`ginkgo-fd -r`
-run without it, so you still see full logging when debugging a specific
-suite. See each toolchain's own setup below.
+`npm run test` (plain `npm test`) runs `vitest run` followed by
+`go test -v ./... | gorderly -fv` -- `-fv` renders Go's output in
+[Vitest](https://vitest.dev)'s own tree conventions (`✓`/`×`/`↓` glyphs,
+matching green/duration styling), so the two test runs read as one
+consistent terminal instead of two visibly different tools. `test-go`
+above uses `-fd` (RSpec's documentation format) instead, for a plainer
+one-off run.
+
+`npm run check` runs five of those in order and roughly matches what CI
+checks (`ci.yml`'s `golangci-lint`, `go-test`, and `javascript` jobs) --
+run it locally before pushing to catch most of what CI would catch. One
+real gap: `check` includes `lint-html`, but CI does not -- `ci.yml` has no
+job that runs it, so an HTML-template lint failure only surfaces locally,
+not in a PR. It also sets `LOG_QUIET=1` for its `go test` step (see
+"Configuration" above), so failures are still visible but passing-test log
+noise isn't -- `test-go`/plain `npm test` run without it, so you still see
+full logging when debugging a specific suite. See each toolchain's own
+setup below.
 
 ### Go
 
 ```bash
-# Install the Ginkgo CLI (first time only)
-go install github.com/onsi/ginkgo/v2/ginkgo@latest
-go install github.com/woodie/ginkgo-fd@latest
-
 # Install golangci-lint (first time only)
 brew install golangci-lint   # macOS -- see https://golangci-lint.run/welcome/install/ for other platforms
+
+# Install gorderly (first time only)
+go install github.com/woodie/gorderly@latest
 
 # Make sure ~/go/bin is on your PATH
 export PATH="$PATH:$(go env GOPATH)/bin"
@@ -129,19 +146,15 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 # zero-config approach as standard/standardrb)
 golangci-lint run
 
-# Run every suite
-ginkgo -r -v
-ginkgo-fd -r
+# Run every suite, rendered as a nested describe/context/it tree
+go test -v ./... | gorderly -fd    # RSpec's documentation format
+go test -v ./... | gorderly -fv    # Vitest's own tree conventions
 
 # Or just one binary's suite
-ginkgo -v ./cmd/lambada-mta
-ginkgo -v ./cmd/lambada-web
+go test -v ./cmd/lambada-mta | gorderly -fd
+go test -v ./cmd/lambada-web | gorderly -fd
 
-# Try format documentation
-ginkgo -fd cmd/*
-ginkgo-fd cmd/*
-
-# Plain `go test` works too
+# Plain `go test` works too, with go test's own default output
 go test ./...
 ```
 

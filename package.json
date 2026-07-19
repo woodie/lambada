@@ -3,7 +3,7 @@
   "private": true,
   "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/gorderly)",
   "scripts": {
-    "test": "vitest run && go test -v ./... | gorderly -fd",
+    "test": "vitest run && go test -v ./... | gorderly -fv",
     "lint-js": "standard --fix",
     "test-js": "vitest run",
     "lint-go": "golangci-lint run --fix",
