@@ -15,6 +15,41 @@ Read `README.md` first for the user-facing description and API
 contract. This doc is about *how the project got here* and *how to keep
 working on it consistently*.
 
+## Writing tests here
+
+Tests use [`sclevine/spec`](https://github.com/sclevine/spec) (replaced
+in `go.mod` with [`github.com/woodie/spec`](https://github.com/woodie/spec))
+for structure and [`github.com/woodie/expect`](https://github.com/woodie/expect)
+for assertions:
+
+```go
+func TestAttachments(t *testing.T) {
+	spec.RunAliased(t, "Attachments", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
+		describe("checkAttachmentDir", func() {
+			context("when the path is missing", func() {
+				it("creates the directory", func() {
+					Expect(t, attachmentDir).To(BeADirectory())
+				})
+			})
+		})
+	})
+}
+```
+
+`describe`/`context`/`it` nest like RSpec; `before`/`after` register
+hooks -- only name the ones a given test actually uses, `_` the rest.
+`expect` is dot-imported, so matchers read as `Expect(t, got).To(Matcher)`/
+`.NotTo(Matcher)`. Never put a literal `/` in a `describe`/`context`/`it`
+string -- both `spec`'s flat mode and `gorderly`'s tree renderer treat `/`
+as a real hierarchy separator, so one shows up as spurious extra nesting
+(this bit lambada once already -- see "Fixed a confusing tree render"
+below).
+
+Run with `go test -v ./... | gorderly -fd` (RSpec-style) or `gorderly -fv`
+(Vitest-style, matching the JS suite's own output) instead of plain
+`go test`'s flat `--- PASS` lines. `npm run test-go`/`npm test` wrap
+these -- see `README.md`/`package.json` for the exact commands.
+
 ## Why Go, and what it costs
 
 The short version of how lambada exists at all: `scandalous`
