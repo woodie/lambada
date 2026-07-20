@@ -1204,12 +1204,11 @@ boundary. `cmd/lambada-web` shares one copy in a new
 site now reads `expect(x, t).To(Matcher(y))`, blending in with the rest of
 the lowercase DSL instead of standing out.
 
-This is a breaking change to `expect`'s public API, made in the same
-session as the library change itself -- not yet tagged/published (see this
-account's root `docs/COWORK.md`, "Shared libraries across sibling repos"),
-so `go.mod`'s `github.com/woodie/expect v0.1.0` pin is now stale relative
-to these edits until `expect` cuts a new tagged release and this repo's
-pin is bumped and its lockfile regenerated on the user's own Mac.
+This was a breaking change to `expect`'s public API, made in the same
+session as the library change itself. Resolved: `expect` tagged/published
+as `v0.2.0`, this repo's `go.mod` pin bumped and `go.sum` regenerated for
+real on the user's own Mac, full suite confirmed clean --
+`go test -v ./... | gorderly -fd`: 0 failed, 0 skipped, 55 total.
 
 ## Same session: suite bodies pulled out of the inline `spec.Run`/`RunAliased` closure
 
