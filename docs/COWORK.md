@@ -1180,3 +1180,55 @@ isolated to `main_test.go`. Worth keeping in mind for any future spec
 suite: don't put literal `/` in `describe`/`context`/`it` names, since it's
 never just cosmetic here -- `spec`'s own flat naming, and Go's `-v` output
 for real nested subtests, both use `/` as a genuine hierarchy separator.
+
+## `Expect(got, t)` and the lowercase `expect` alias
+
+Looking at `main_test.go` once its `spec` blocks were already lowercase
+`describe`/`context`/`it`/`before`/`after`, `Expect(t, got)` stood out --
+`t` leading the line read like passing `self` in some other language.
+Explored in `github.com/woodie/expect` issue #1 and worked through in that
+repo's own `docs/COWORK.md`; the short version landing here: `expect`'s
+`Expect[T any](t testing.TB, got T)` flipped to `Expect[T any](got T,
+t testing.TB)`, subject first, `t` a trailing detail.
+
+All five of this repo's `spec`-based suites (`main_test.go`,
+`middleware_test.go`, `server_test.go`, `scanfiles_test.go` in
+`cmd/lambada-web`; `attachments_test.go` in `cmd/lambada-mta`) picked up
+the reordered call sites plus `expect`'s new recommended lowercase alias --
+a one-line local generic pass-through (`func expect[T any](got T, t
+testing.TB) Expectation[T] { return Expect(got, t) }`), declared once per
+package since Go's capitalize-to-export rule only bites across a package
+boundary. `cmd/lambada-web` shares one copy in a new
+`expect_alias_test.go`; `cmd/lambada-mta` has its own at the top of
+`attachments_test.go` since it's the package's only test file. Every call
+site now reads `expect(x, t).To(Matcher(y))`, blending in with the rest of
+the lowercase DSL instead of standing out.
+
+This is a breaking change to `expect`'s public API, made in the same
+session as the library change itself -- not yet tagged/published (see this
+account's root `docs/COWORK.md`, "Shared libraries across sibling repos"),
+so `go.mod`'s `github.com/woodie/expect v0.1.0` pin is now stale relative
+to these edits until `expect` cuts a new tagged release and this repo's
+pin is bumped and its lockfile regenerated on the user's own Mac.
+
+## Same session: suite bodies pulled out of the inline `spec.Run`/`RunAliased` closure
+
+Following the same pattern `expect`'s own `expect_test.go` adopted first
+(see its `docs/COWORK.md`): every `Test*` function in this repo used to
+pass its whole suite as an inline closure straight into `spec.Run`/
+`spec.RunAliased`. Since Go function types are structural, no change to
+`spec` was needed to pull each closure out into a named, top-level
+function with a matching signature instead -- `TestLambadaWeb` calls
+`lambadaWebSuite`, `TestMiddleware` calls `middlewareSuite`, `TestServer`
+calls `serverSuite`, `TestScanFiles` calls `scanFilesSuite`, and
+`TestAttachments` calls `attachmentsSuite`, each named function declared
+right below its `Test*` entry point in the same file.
+
+Worth calling out since this repo is meant to double as a readable example
+of a Sinatra-style Go app, not just internal test coverage: every `Test*`
+function is now a one-liner (`spec.RunAliased(t, "Lambada WEB",
+lambadaWebSuite)`), and the actual suite body -- the part someone reads to
+understand what's covered -- is the very next declaration in the file, not
+buried inside a multi-line closure header. The parameter list itself
+didn't go away; it just moved from an inline closure to a named function's
+own header.
