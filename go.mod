@@ -10,5 +10,3 @@ require (
 )
 
 require github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
-
-replace github.com/sclevine/spec => github.com/woodie/spec v0.1.0

@@ -17,18 +17,21 @@ working on it consistently*.
 
 ## Writing tests here
 
-Tests use [`sclevine/spec`](https://github.com/sclevine/spec) (replaced
-in `go.mod` with [`github.com/woodie/spec`](https://github.com/woodie/spec))
-for structure and [`github.com/woodie/expect`](https://github.com/woodie/expect)
-for assertions:
+Tests use plain [`sclevine/spec`](https://github.com/sclevine/spec) (real
+upstream, no fork, no `replace` directive -- see "Reversal: moved off the
+`woodie/spec` fork" below) for structure and
+[`github.com/woodie/expect`](https://github.com/woodie/expect) for
+assertions:
 
 ```go
 func TestAttachments(t *testing.T) {
-	spec.RunAliased(t, "Attachments", func(t *testing.T, describe, context spec.Describe, it spec.S, before, after func(func())) {
+	spec.Run(t, "Attachments", func(t *testing.T, describe spec.G, it spec.S) {
+		context, before := describe, it.Before
+
 		describe("checkAttachmentDir", func() {
 			context("when the path is missing", func() {
 				it("creates the directory", func() {
-					Expect(t, attachmentDir).To(BeADirectory())
+					expect(attachmentDir, t).To(BeADirectory())
 				})
 			})
 		})
@@ -36,10 +39,13 @@ func TestAttachments(t *testing.T) {
 }
 ```
 
-`describe`/`context`/`it` nest like RSpec; `before`/`after` register
-hooks -- only name the ones a given test actually uses, `_` the rest.
-`expect` is dot-imported, so matchers read as `Expect(t, got).To(Matcher)`/
-`.NotTo(Matcher)`. Never put a literal `/` in a `describe`/`context`/`it`
+`describe`/`context`/`it` nest like RSpec; `context`/`before`/`after` are
+`describe`/`it.Before`/`it.After` under friendlier names, assigned once at
+the top of the suite function -- only name the ones a given suite actually
+uses, drop the rest. `expect` is the lowercase call-site alias from
+`expect`'s own README (dot-imported `Expect`/matchers underneath), so call
+sites read `expect(got, t).To(Matcher)`/`.NotTo(Matcher)`. Never put a
+literal `/` in a `describe`/`context`/`it`
 string -- both `spec`'s flat mode and `gorderly`'s tree renderer treat `/`
 as a real hierarchy separator, so one shows up as spurious extra nesting
 (this bit lambada once already -- see "Fixed a confusing tree render"
@@ -49,6 +55,40 @@ Run with `go test -v ./... | gorderly -fd` (RSpec-style) or `gorderly -fv`
 (Vitest-style, matching the JS suite's own output) instead of plain
 `go test`'s flat `--- PASS` lines. `npm run test-go`/`npm test` wrap
 these -- see `README.md`/`package.json` for the exact commands.
+
+## Reversal: moved off the `woodie/spec` fork, back to plain upstream
+
+All five test files (`main_test.go`, `middleware_test.go`,
+`server_test.go`, `scanfiles_test.go` in `lambada-web`; `attachments_test.go`
+in `lambada-mta`) used `spec.RunAliased` against the `github.com/woodie/spec`
+fork, with `it.T().TempDir()`/`it.T().Skip(...)` for temp-dir/skip access
+inside hooks. Walked back to plain `github.com/sclevine/spec` -- `go.mod`'s
+`replace` directive dropped, `RunAliased` replaced by plain `spec.Run` plus
+one local line per suite function (`context, before, after := describe,
+it.Before, it.After`, trimmed to whichever of the three a given suite
+actually uses), and every `it.T()` replaced by the suite function's own
+`t` parameter, reachable directly from any `before`/`after`/`it` closure by
+ordinary Go closure capture -- `spec` re-evaluates the whole suite function
+per spec, so `t` is already correctly scoped without a method call to fetch
+it. Same reasoning recorded in `gorderly`'s own `docs/COWORK.md`, which this
+mirrors. `expect` is unaffected -- still dot-imported, still paired with
+`spec`, just plain upstream `spec` instead of the fork now.
+
+Confirmed clean on a real Mac: `go mod tidy` dropped the stale
+`woodie/spec` entries and resolved real `sclevine/spec v1.4.0` checksums,
+`go build ./...` succeeds, and `go test -v ./cmd/... | gorderly -fd`
+passes all 55 specs across both packages.
+
+Every suite is now a single inline closure passed straight to `spec.Run`
+-- no separate named `xSuite` function -- with the destructuring line
+(`context, before, after := describe, it.Before, it.After`, trimmed to
+whichever of the three a given suite actually uses) as the first line
+inside the closure, followed by a blank line before the real setup/specs
+begin. Each package's alias file is named `config_test.go` (not
+`expect_alias_test.go`/`testconventions_test.go`) and carries the real
+`expect` alias plus a commented-out `/* ... */` Calculator example
+demonstrating the convention -- matching the shape `gorderly` settled on
+in its own `config_test.go`.
 
 ## Why Go, and what it costs
 
