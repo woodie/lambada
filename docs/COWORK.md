@@ -1128,8 +1128,11 @@ package, reasoning it was project-specific the way `spec_helper.rb` is.
 Corrected same session: this isn't project-specific at all, it's a pure
 `spec`-level convenience with nothing about `lambada` baked in, so it
 belongs in `~/workspace/spec` itself where every consumer of
-`github.com/woodie/spec` gets it for free -- `spec.RunAliased` (see
-`spec`'s own `docs/COWORK.md`), wrapping `Run` + `Aliases`.
+`github.com/woodie/spec` gets it for free -- `spec.RunAliased` (documented
+at the time in `spec`'s own `docs/COWORK.md`, since removed along with the
+rest of that fork-only `docs/` folder when `spec`'s `master` was reset to
+plain `upstream/master` -- see "Reversal: moved off the `woodie/spec`
+fork" above), wrapping `Run` + `Aliases`.
 `internal/spectest` deleted; every migrated file now calls `spec.RunAliased`
 directly, still getting `describe`/`context`/`it`/`before`/`after` as plain
 callback parameters with zero declaration line:
