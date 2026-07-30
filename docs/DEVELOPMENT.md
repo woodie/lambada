@@ -141,8 +141,10 @@ go install github.com/woodie/gorderly@latest
 # Make sure ~/go/bin is on your PATH
 export PATH="$PATH:$(go env GOPATH)/bin"
 
-# Lint (no .golangci.yml -- using its default linter set, same
-# zero-config approach as standard/standardrb)
+# Lint (default linter set, same zero-config approach as standard/standardrb --
+# the only override in .golangci.yml excludes node_modules from analysis,
+# since `npm install` for the JS toolchain below can pull in stray .go files
+# bundled inside a dependency's own repo, e.g. flatted's Go port)
 golangci-lint run
 
 # Run every suite, rendered as a nested describe/context/it tree
