@@ -1274,3 +1274,14 @@ understand what's covered -- is the very next declaration in the file, not
 buried inside a multi-line closure header. The parameter list itself
 didn't go away; it just moved from an inline closure to a named function's
 own header.
+
+## Bumped to `expect` v0.3.0 (`ContainSubstring`/`HaveLen`/`BeEmpty`)
+
+`go.mod`'s `github.com/woodie/expect` pin bumped `v0.2.0` -> `v0.3.0`; no
+call-site changes, no new `lambada` version needed. Hit the
+`go.sum`-not-committed gotcha rolling this out across `expect`'s three
+consumers in one session -- see `~/workspace/woodie/docs/COWORK.md`'s
+"Shared libraries across sibling repos" for the general lesson. Fixed here
+with a follow-up commit adding just the regenerated `go.sum`; full suite
+(`go test ./...`, both `cmd/lambada-web` and `cmd/lambada-mta`) confirmed
+clean after.
