@@ -17,16 +17,17 @@ working on it consistently*.
 
 ## Writing tests here
 
-Tests use plain [`sclevine/spec`](https://github.com/sclevine/spec) (real
-upstream, no fork, no `replace` directive -- see "Reversal: moved off the
-`woodie/spec` fork" below) for structure and
+Tests use [`sclevine/spec`](https://github.com/sclevine/spec) via the
+[`woodie/spec`](https://github.com/woodie/spec) fork (picked up through a
+`go.mod` `replace` directive, module path unchanged from upstream -- see
+"Second reversal" below) for structure and
 [`github.com/woodie/expect`](https://github.com/woodie/expect) for
 assertions:
 
 ```go
 func TestAttachments(t *testing.T) {
-	spec.Run(t, "Attachments", func(t *testing.T, describe spec.G, it spec.S) {
-		context, before := describe, it.Before
+	spec.Run(t, "Attachments", func(t *testing.T, context spec.G, it spec.S) {
+		describe := context
 
 		describe("checkAttachmentDir", func() {
 			context("when the path is missing", func() {
@@ -39,10 +40,15 @@ func TestAttachments(t *testing.T) {
 }
 ```
 
-`describe`/`context`/`it` nest like RSpec; `context`/`before`/`after` are
-`describe`/`it.Before`/`it.After` under friendlier names, assigned once at
-the top of the suite function -- only name the ones a given suite actually
-uses, drop the rest. `expect` is the lowercase call-site alias from
+`context`/`describe`/`it` nest like RSpec. The group parameter is named
+`context`, since most nested groups describe a condition; `describe :=
+context` only gets declared in a suite that genuinely calls
+`describe(...)` to name a method/feature under test -- some do
+(`attachments_test.go`, `scanfiles_test.go`, `server_test.go`,
+`middleware_test.go`), some don't and skip the alias entirely. `it`'s
+hook methods (`it.BeforeEach`/`it.AfterEach`/`it.JustBeforeEach`) are
+called qualified, not aliased -- see `gorderly`'s own `docs/COWORK.md`
+for the fuller reasoning. `expect` is the lowercase call-site alias from
 `expect`'s own README (dot-imported `Expect`/matchers underneath), so call
 sites read `expect(got, t).To(Matcher)`/`.NotTo(Matcher)`. Never put a
 literal `/` in a `describe`/`context`/`it`
@@ -89,6 +95,46 @@ begin. Each package's alias file is named `config_test.go` (not
 `expect` alias plus a commented-out `/* ... */` Calculator example
 demonstrating the convention -- matching the shape `gorderly` settled on
 in its own `config_test.go`.
+
+## Second reversal: back on `woodie/spec`, this time for BeforeEach/AfterEach/JustBeforeEach
+
+Different shape from the reversal above -- no `RunAliased`, no
+`it.T()`/six-parameter signature, no separate named suite functions.
+`go.mod` picks up `woodie/spec` v0.2.0 via a plain `replace` directive
+(`replace github.com/sclevine/spec => github.com/woodie/spec v0.2.0`),
+since the fork keeps upstream's module path unchanged. The fork adds
+`BeforeEach`/`AfterEach`/`JustBeforeEach` (`Before`/`After` still work,
+deprecated via `staticcheck`'s `SA1019`, not removed) -- see
+`woodie/spec`'s own `docs/COWORK.md` for the full history.
+
+Every real call site across both packages (`main_test.go`,
+`scanfiles_test.go`, `attachments_test.go`) updated from
+`it.Before(...)`/`it.After(...)` to `it.BeforeEach(...)`/
+`it.AfterEach(...)`, called qualified instead of aliased to bare
+`before`/`after` locals -- three hook names made the old one-line
+destructuring cluttered.
+
+Separately: flipped which word is the raw `spec.Run` group parameter,
+account-wide. Previously `describe spec.G` was the parameter and
+`context`/`before`/`after` got destructured from it as `context, before,
+after := describe, it.Before, it.After` (trimmed to whichever were
+actually used). Flipped directly: the parameter is now named `context`,
+and `describe := context` is only declared in files that genuinely call
+`describe(...)` somewhere. In this repo that's `attachments_test.go`,
+`scanfiles_test.go`, `server_test.go`, and `middleware_test.go` (each
+groups by method/feature via `describe`, with `context` nested inside
+for conditions); `main_test.go` also uses both. None of the five files
+needed the alias dropped entirely -- unlike `gorderly`'s equivalent
+update, where every real file only ever called `context(...)`. Same
+account-wide rule recorded in `gorderly`'s own `docs/COWORK.md`.
+
+Not yet verified against a real Go toolchain -- no Go in this sandbox
+(see "Sandbox limitation" below). `go mod tidy && make check` (or
+`go test -v ./cmd/... | gorderly -fd`) on the user's own Mac is the next
+step, remembering to commit `go.sum` alongside `go.mod` before pushing
+-- see `~/workspace/woodie/docs/COWORK.md`'s "Shared libraries across
+sibling repos" for the gotcha this bit `gorderly`/`lambada`/`humane`
+with previously.
 
 ## Why Go, and what it costs
 

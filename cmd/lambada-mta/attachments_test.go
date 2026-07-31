@@ -41,10 +41,10 @@ var base64PdfMessage = "From: sender@example.com\r\n" +
 	"--boundary--\r\n"
 
 func TestAttachments(t *testing.T) {
-	spec.Run(t, "Attachments", func(t *testing.T, describe spec.G, it spec.S) {
-		context, before := describe, it.Before
+	spec.Run(t, "Attachments", func(t *testing.T, context spec.G, it spec.S) {
+		describe := context
 
-		before(func() { attachmentDir = t.TempDir() }) // stub implementation
+		it.BeforeEach(func() { attachmentDir = t.TempDir() }) // stub implementation
 
 		describe("checkAttachmentDir", func() {
 			context("when the path is missing", func() {
@@ -75,7 +75,7 @@ func TestAttachments(t *testing.T) {
 		describe("cleanupOldFiles", func() {
 			var pdf, dss, dir string
 
-			before(func() {
+			it.BeforeEach(func() {
 				pdf = filepath.Join(attachmentDir, "1234567890.pdf")
 				_ = os.WriteFile(pdf, []byte("data"), 0644)
 				dss = filepath.Join(attachmentDir, ".DS_Store")
@@ -92,7 +92,7 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when entries are older", func() {
-				before(func() {
+				it.BeforeEach(func() {
 					old := time.Now().Add(-25 * time.Hour)
 					_ = os.Chtimes(pdf, old, old)
 					_ = os.Chtimes(dir, old, old)
@@ -124,7 +124,7 @@ func TestAttachments(t *testing.T) {
 			}
 
 			context("when the message is not multipart", func() {
-				before(func() { processMessage(plainMessage) })
+				it.BeforeEach(func() { processMessage(plainMessage) })
 
 				it("returns no error", func() { expect(err, t).To(Succeed()) })
 				it("saves no files", func() {
@@ -134,7 +134,7 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when the message has only inline parts", func() {
-				before(func() { processMessage(inlineMessage) })
+				it.BeforeEach(func() { processMessage(inlineMessage) })
 
 				it("returns no error", func() { expect(err, t).To(Succeed()) })
 				it("saves no files", func() {
@@ -144,7 +144,7 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when the message has an attachment", func() {
-				before(func() { processMessage(multipartMessage) })
+				it.BeforeEach(func() { processMessage(multipartMessage) })
 
 				it("returns no error", func() { expect(err, t).To(Succeed()) })
 				it("saves one file", func() {
@@ -163,7 +163,7 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when the message has a base64-encoded PDF attachment", func() {
-				before(func() { processMessage(base64PdfMessage) })
+				it.BeforeEach(func() { processMessage(base64PdfMessage) })
 
 				it("returns no error", func() { expect(err, t).To(Succeed()) })
 				it("saves one file", func() {
@@ -186,7 +186,7 @@ func TestAttachments(t *testing.T) {
 			var path string
 
 			context("when the path is valid", func() {
-				before(func() { path = filepath.Join(attachmentDir, "test.pdf") })
+				it.BeforeEach(func() { path = filepath.Join(attachmentDir, "test.pdf") })
 
 				it("writes the content to disk", func() {
 					expect(saveAttachment(strings.NewReader("fake pdf content"), path), t).To(Succeed())
@@ -197,7 +197,7 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when the path is invalid", func() {
-				before(func() { path = "/nonexistent/dir/file.pdf" })
+				it.BeforeEach(func() { path = "/nonexistent/dir/file.pdf" })
 
 				it("returns an error", func() {
 					expect(saveAttachment(strings.NewReader("data"), path), t).To(HaveOccurred())

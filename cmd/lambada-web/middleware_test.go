@@ -11,7 +11,8 @@ import (
 
 // TestMiddleware exercises withLogging, the request-logging wrapper middleware.go defines.
 func TestMiddleware(t *testing.T) {
-	spec.Run(t, "Middleware", func(t *testing.T, describe spec.G, it spec.S) {
+	spec.Run(t, "Middleware", func(t *testing.T, context spec.G, it spec.S) {
+		describe := context
 
 		describe("withLogging", func() {
 			it("passes through the wrapped handler's status and body unchanged", func() {

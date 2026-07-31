@@ -21,10 +21,14 @@ see "Configuration" and "systemd Services" below.
 
 - [`github.com/emersion/go-smtp`](https://github.com/emersion/go-smtp) -- SMTP server primitives (lambada-mta)
 - [`github.com/sclevine/spec`](https://github.com/sclevine/spec) -- test
-  organization (`describe`/`context`/`it`), real upstream, no fork/replace
-  directive. `context`/`before`/`after` are declared as one local line at
-  the top of each suite function (`context, before, after := describe,
-  it.Before, it.After`) rather than via any generated aliasing
+  organization (`context`/`describe`/`it`), picked up via the
+  [`woodie/spec`](https://github.com/woodie/spec) fork through a `go.mod`
+  `replace` directive (module path unchanged from upstream). The group
+  parameter is named `context` (most nested groups describe a condition);
+  `describe := context` only gets declared in files that actually call
+  `describe(...)` to name a method/feature under test. `it`'s hook
+  methods (`it.BeforeEach`/`it.AfterEach`/`it.JustBeforeEach`) are called
+  qualified, not aliased
 - [`github.com/woodie/expect`](https://github.com/woodie/expect) --
   Gomega-style matcher library, generics-based, dot-imported in test files
 - [`github.com/woodie/humane`](https://github.com/woodie/humane) --

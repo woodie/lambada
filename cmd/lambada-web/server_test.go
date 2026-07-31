@@ -11,7 +11,8 @@ import (
 
 // TestServer exercises newServer, the constructor server.go defines.
 func TestServer(t *testing.T) {
-	spec.Run(t, "Server", func(t *testing.T, describe spec.G, it spec.S) {
+	spec.Run(t, "Server", func(t *testing.T, context spec.G, it spec.S) {
+		describe := context
 
 		describe("newServer", func() {
 			it("sets the address and handler", func() {

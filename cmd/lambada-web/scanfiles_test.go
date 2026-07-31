@@ -13,12 +13,12 @@ import (
 
 // TestScanFiles exercises scanFilesListing/toScansJSON, the Go port of Ruby's ScanFiles#listing/#scans_json.
 func TestScanFiles(t *testing.T) {
-	spec.Run(t, "ScanFiles", func(t *testing.T, describe spec.G, it spec.S) {
-		before := it.Before
+	spec.Run(t, "ScanFiles", func(t *testing.T, context spec.G, it spec.S) {
+		describe := context
 
 		describe("scanFilesListing", func() {
 			var dir string
-			before(func() { dir = t.TempDir() })
+			it.BeforeEach(func() { dir = t.TempDir() })
 
 			it("returns an empty slice for an empty directory", func() {
 				scans, err := scanFilesListing(dir)
@@ -56,7 +56,7 @@ func TestScanFiles(t *testing.T) {
 		})
 
 		describe("scanFilesPath", func() {
-			before(func() { scanDir = t.TempDir() }) // stub implementation
+			it.BeforeEach(func() { scanDir = t.TempDir() }) // stub implementation
 
 			it("resolves an existing file", func() {
 				expect(os.WriteFile(filepath.Join(scanDir, "1234567890.pdf"), []byte("content"), 0o644), t).To(Succeed())
