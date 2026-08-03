@@ -7,7 +7,7 @@
     "lint-js": "standard --fix",
     "test-js": "vitest run",
     "lint-go": "golangci-lint run --fix",
-    "test-go": "go test -v ./... | gorderly -fd",
+    "test-go": "go test -v ./... | gorderly -fv",
     "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
     "format-go": "go fmt ./...",
     "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html"

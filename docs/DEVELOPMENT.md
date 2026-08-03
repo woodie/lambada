@@ -107,7 +107,7 @@ npm install           # JS devDependencies (first time only)
 npm run lint-js        # standard --fix
 npm run test-js        # vitest run
 npm run lint-go         # golangci-lint run --fix
-npm run test-go        # go test -v ./... | gorderly -fd (documentation-style output)
+npm run test-go        # go test -v ./... | gorderly -fv (Vitest-tree output)
 npm run format-go       # go fmt ./...
 npm run lint-html       # html-validate --ext=tmpl cmd/lambada-web/views/
 
@@ -119,8 +119,8 @@ npm run check          # standard, vitest, golangci-lint, go test, lint-html -- 
 [Vitest](https://vitest.dev)'s own tree conventions (`✓`/`×`/`↓` glyphs,
 matching green/duration styling), so the two test runs read as one
 consistent terminal instead of two visibly different tools. `test-go`
-above uses `-fd` (RSpec's documentation format) instead, for a plainer
-one-off run.
+above uses the same `-fv` style on its own, for when you only want the Go
+suite without also running the JS one.
 
 `npm run check` runs five of those in order and roughly matches what CI
 checks (`ci.yml`'s `golangci-lint`, `go-test`, and `javascript` jobs) --
