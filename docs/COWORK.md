@@ -17,12 +17,11 @@ working on it consistently*.
 
 ## Writing tests here
 
-Tests use [`sclevine/spec`](https://github.com/sclevine/spec) via the
-[`woodie/spec`](https://github.com/woodie/spec) fork (picked up through a
-`go.mod` `replace` directive, module path unchanged from upstream -- see
-"Second reversal" below) for structure and
-[`github.com/woodie/expect`](https://github.com/woodie/expect) for
-assertions:
+Tests use [`woodie/spec`](https://github.com/woodie/spec) (`woodie`'s own
+fork of upstream `sclevine/spec`, published under its own module path as
+of `woodie/spec#3` -- see "Second reversal" below for how it got picked up)
+for structure and [`github.com/woodie/expect`](https://github.com/woodie/expect)
+for assertions:
 
 ```go
 func TestAttachments(t *testing.T) {

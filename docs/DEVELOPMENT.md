@@ -20,10 +20,9 @@ see "Configuration" and "systemd Services" below.
 ## Dependencies
 
 - [`github.com/emersion/go-smtp`](https://github.com/emersion/go-smtp) -- SMTP server primitives (lambada-mta)
-- [`github.com/sclevine/spec`](https://github.com/sclevine/spec) -- test
-  organization (`context`/`describe`/`it`), picked up via the
-  [`woodie/spec`](https://github.com/woodie/spec) fork through a `go.mod`
-  `replace` directive (module path unchanged from upstream). The group
+- [`github.com/woodie/spec`](https://github.com/woodie/spec) -- test
+  organization (`context`/`describe`/`it`), `woodie`'s own fork of upstream
+  `sclevine/spec`, published under its own module path. The group
   parameter is named `context` (most nested groups describe a condition);
   `describe := context` only gets declared in files that actually call
   `describe(...)` to name a method/feature under test. `it`'s hook
