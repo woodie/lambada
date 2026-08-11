@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sclevine/spec"
+	"github.com/woodie/spec"
 	. "github.com/woodie/expect"
 )
 
