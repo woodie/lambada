@@ -366,11 +366,19 @@ Install:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y nginx
+sudo apt-get install -y nginx libnginx-mod-http-dav-ext
+
+# Drop the port 80 redirect, if it's there, so nginx gets port 80 (keep the port 25 one)
+sudo iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+
+# Let nginx (www-data) delete scans: group-writable folder, www-data in pi's group
+sudo usermod -aG pi www-data
+sudo chmod g+w /srv/lambada/attachments
+
 sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
 sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl restart nginx
 
 # Switch lambada-web to loopback-only now that nginx is fronting it
 sudo systemctl edit lambada-web
@@ -384,6 +392,15 @@ Verify nginx is proxying correctly (both should return the listing page):
 ```bash
 curl -I http://localhost/            # via nginx, port 80
 curl -I http://127.0.0.1:8080/       # lambada-web directly, bypassing nginx
+```
+
+The same config also serves the scans folder over WebDAV at `/scans/`,
+straight from disk: `PROPFIND` (with `Depth: 1`) lists it, `GET` downloads a
+file and `DELETE` removes one. Deleting the folder itself, uploading, and
+creating folders are refused. Check the listing with:
+
+```bash
+curl -X PROPFIND -H "Depth: 1" http://localhost/scans/
 ```
 
 ### Rolling back to the iptables redirect
