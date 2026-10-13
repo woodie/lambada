@@ -22,8 +22,9 @@ has the rest. None of it is needed to work on the current code.
 
 - **The folder is a general share, not just a scan inbox.** Cleanup deletes
   only scans (`^[0-9]{10}\.pdf$`, older than 24 hours, run when a scan
-  arrives); uploads stay until someone deletes them. nginx refuses uploads
-  with a scan's name, so the two never overlap (#22).
+  arrives); uploads stay until someone deletes them. An upload with a scan's
+  name counts as a scan. nginx used to refuse those, but explaining "this may
+  be deleted next time you scan" was worse than just letting it expire.
 - **Uploads:** PUT to the top level only, up to 25 MB, the same limit as an
   emailed scan. Replacing an existing upload is allowed (#22 suggested
   create-only), since Finder can PUT the same name more than once while

@@ -34,8 +34,8 @@ value, silences logging (used by `npm run check`).
 Cleanup runs each time a scan arrives and deletes files older than
 `maxFileAge` whose names match `^[0-9]{10}\.pdf$`, the names lambada gives
 scans. Everything else in the folder (uploads, Finder's hidden files,
-folders) is left alone. nginx refuses uploads with a scan's name, so an
-upload is never cleaned up and never replaces a scan.
+folders) is left alone. An upload with a scan's name (a downloaded scan put
+back) counts as a scan.
 
 ## WebDAV (nginx)
 
@@ -44,9 +44,8 @@ upload is never cleaned up and never replaces a scan.
 - `PROPFIND` (`Depth: 1`) lists it: name, size and modified date per file
 - `GET` downloads, `PUT` uploads, `DELETE` removes a file
 - `LOCK`/`UNLOCK`, so Finder treats the folder as writable
-- refused (403): deleting the folder itself, uploading into a subfolder or
-  over a scan's name, creating folders, copying and moving, and changing the
-  page's files
+- refused (403): deleting the folder itself, uploading into a subfolder,
+  creating folders, copying and moving, and changing the page's files
 - a browser's plain `GET /` gets the scan page from `/srv/lambada/public/`,
   served at `/.lambada/` (hidden, so never listed)
 
@@ -107,9 +106,8 @@ The page is plain TypeScript with no framework: `src/main.ts` reads the
 WebDAV listing and renders it like a Finder list (name, size, age, plus a
 delete button), and uploads with `PUT`, from the "upload files" button or
 files dropped on the page. nginx sends the page's files with
-`Cache-Control: no-cache`, so browsers pick up an update on the next load. It checks nginx's two upload rules first (no
-scan names, 25 MB at most) so it can say why, and asks before replacing a
-file with the same name. It uses
+`Cache-Control: no-cache`, so browsers pick up an update on the next load. It checks nginx's 25 MB upload limit first so it
+can say why, and asks before replacing a file with the same name. It uses
 [humane-ts](https://github.com/woodie/humane-ts) for sizes and ages. Vite
 bundles it, with humane-ts, into one minified IIFE, `public/main.js`, and
 `index.html` calls `Lambada.start()`. After changing `src/` or updating

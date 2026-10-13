@@ -255,7 +255,7 @@ describe('start', () => {
   let env, listing, deleteStatus, putStatus, visibility
 
   const subject = async () => { await start(env); await flush() }
-  const list = () => document.getElementById('scans')
+  const list = () => document.getElementById('files')
   const status = () => document.getElementById('status')
   const reply = (code, body = null) => Promise.resolve(new Response(body, { status: code }))
   const requests = (method) => env.fetch.mock.calls.filter(([, options]) => options.method === method)
@@ -517,13 +517,13 @@ describe('start', () => {
       })
     })
 
-    context("with a scan's name", () => {
+    context("with a scan's name (a downloaded scan put back)", () => {
       beforeEach(() => { files = [file('1791851911.pdf')] })
 
-      it("doesn't send it, and says why", async () => {
+      it('uploads it like any other file', async () => {
         await drop()
-        expect(requests('PUT')).toHaveLength(0)
-        expect(env.alert).toHaveBeenCalledWith("Couldn't upload 1791851911.pdf (that name is kept for scans).")
+        expect(requests('PUT')[0][0]).toBe('/1791851911.pdf')
+        expect(env.alert).not.toHaveBeenCalled()
       })
     })
 
