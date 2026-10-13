@@ -3,10 +3,9 @@ import { fileIcon, trash } from './icons.ts'
 
 const DAV = 'DAV:'
 
-// nginx refuses uploads over this (client_max_body_size) and with a scan's
-// name, so the page checks first and can say why.
+// nginx refuses uploads over this (client_max_body_size), so the page checks
+// first and can say why.
 const MAX_UPLOAD = 25 * 1024 * 1024
-const SCAN_NAME = /^[0-9]{10}\.pdf$/
 
 export interface Scan {
   href: string
@@ -128,10 +127,6 @@ export function start (env: Env = globalThis): Promise<void> {
     if (files.length === 0) return
     const failed: string[] = []
     for (const file of files) {
-      if (SCAN_NAME.test(file.name)) {
-        failed.push(`${file.name} (that name is kept for scans)`)
-        continue
-      }
       if (file.size > MAX_UPLOAD) {
         failed.push(`${file.name} (over 25 MB)`)
         continue

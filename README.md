@@ -51,8 +51,7 @@ Ways to get at the scans:
 - **[zouk](https://github.com/woodie/zouk)** (Mac) or
   **[huck](https://github.com/woodie/huck)**, or any other WebDAV client.
 
-Uploads go in the top-level folder only (no subfolders), up to 25 MB each,
-and can't use a scan's name.
+Uploads go in the top-level folder only (no subfolders), up to 25 MB each.
 
 ## Installation
 

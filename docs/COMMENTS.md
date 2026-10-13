@@ -19,9 +19,10 @@ checkout with no setup. Under systemd, `LAMBADA_ATTACHMENTS_DIR` points it at
 ### `scanName` (var)
 Cleanup only deletes files lambada itself named (Unix time, ten digits, plus
 `.pdf`). The folder is also a general WebDAV share, so uploads, Finder's
-hidden files and anything else stay until someone deletes them. nginx
-refuses uploads with a scan's name (`service/lambada.nginx.conf`), so the two
-sets never overlap. Ten digits holds until the year 2286.
+hidden files and anything else stay until someone deletes them. An upload
+with a scan's name (usually a downloaded scan put back) counts as a scan and
+expires 24 hours after it's uploaded; refusing it was more confusing than
+useful. Ten digits holds until the year 2286.
 
 ## main.go
 

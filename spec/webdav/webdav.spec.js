@@ -147,15 +147,6 @@ describe('service/lambada.nginx.conf', () => {
       })
     })
 
-    context("uploading over a scan's name", () => {
-      beforeEach(() => { method = 'PUT'; url = `${baseUrl}/1791851911.pdf`; body = 'x' })
-
-      it('responds 403 and keeps the scan', async () => {
-        expect((await subject()).status).toBe(403)
-        expect(readFileSync(path.join(attachmentsDir, '1791851911.pdf')).equals(scan)).toBe(true)
-      })
-    })
-
     context("changing the page's own files", () => {
       beforeEach(() => { method = 'PUT'; url = `${baseUrl}/.lambada/index.html`; body = 'x' })
 
@@ -194,6 +185,12 @@ describe('service/lambada.nginx.conf', () => {
       await subject()
       const names = (await propfind(`${baseUrl}/`)).entries.map((entry) => entry.name)
       expect(names).toContain('My Upload.pdf')
+    })
+
+    it("accepts a scan's name, such as a downloaded scan put back", async () => {
+      const response = await fetch(`${baseUrl}/1791850000.pdf`, { method: 'PUT', body: uploaded })
+      expect(response.status).toBe(201)
+      expect(readFileSync(path.join(attachmentsDir, '1791850000.pdf')).equals(uploaded)).toBe(true)
     })
 
     it('accepts one as big as an emailed scan', async () => {
