@@ -1330,3 +1330,42 @@ consumers in one session -- see `~/workspace/woodie/docs/COWORK.md`'s
 with a follow-up commit adding just the regenerated `go.sum`; full suite
 (`go test ./...`, both `cmd/lambada-web` and `cmd/lambada-mta`) confirmed
 clean after.
+
+## The Pi switched to nginx WebDAV; the scan page in progress (Oct 13, 2026)
+
+**Done on the Pi (lambada#21, Pi half).** nginx serves
+`service/lambada.nginx.conf` on port 80 at the root, `lambada-web.service` is
+stopped and disabled, and the port 80 → 8080 redirect is gone, saved with
+`sudo netfilter-persistent save` (the method from lambada#1). Port 25 → 2525
+stays. The Pi's `~/workspace/lambada` is on `main`; `lambada-mta` there still
+runs an older build (not urgent, scans arrive fine). Verified with zouk 1.16.0,
+huck 0.6.0 and Finder (`http://scans.netpress.com/`, connect as Guest).
+Rollback, until lambada-web's code is deleted: re-enable the service and re-add
+`iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8080`.
+
+**Order from here:** #20 (the scan page) first, then the rest of #21 (delete
+`cmd/lambada-web`, its service files and docs, and rewrite README/DEVELOPMENT
+and `make install` once, for the final setup). The page is a nice-to-have: the
+browser security issues of the old page are why zouk and huck exist.
+
+**The scan page (branch `scan-page`, for #20).** Vanilla JS, chosen over Vue
+and petite-vue to stay as basic as possible:
+
+- `www/index.html`, `www/scans.js` (one ES module), `www/style.css`, and
+  humane-ts's compiled JS copied into `www/lib/humane/` by `make vendor` and
+  committed, so the Pi needs no npm. (Not `www/vendor/`: `.gitignore` skips
+  every `vendor/` folder.) All page files are addressed as `/.lambada/...`,
+  since a relative URL from `/` would land in the scans folder.
+- `make install-www` copies `www/` to `/srv/lambada/www` (chowned like the
+  attachments folder, so later updates need no sudo).
+- Tests: `spec/javascript/scans.spec.js` (jsdom, a fixed clock, the real
+  `index.html`), 100% coverage of `www/scans.js` enforced by `npm run
+  test-js` and CI; `spec/webdav` now serves the real `www/` and checks the
+  page's files load.
+- Local development, away from the Pi: `make seed` writes test PDFs (a huge
+  A-D on each, so thumbnails differ) into `scans-dev/`; `make docker-run`
+  runs the Pi's nginx setup in Docker (web side only, never the MTA) at
+  `http://localhost:8080/`. `npm run serve` is a no-Docker stand-in.
+- Not yet run: the Docker image itself (Docker Desktop still to be installed
+  on the new Mac; OrbStack was tried and is being removed), and the docs
+  update for the page.
