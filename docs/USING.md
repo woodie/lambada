@@ -23,7 +23,7 @@ long ago it arrived, newest first:
 The page works on a phone too: tap a name to open the file, and use
 **upload files** to send a photo or document from the phone.
 
-## In Finder (Go → Connect to Server)
+## On a Mac: Finder (Go → Connect to Server)
 
 Finder can open the folder like a disk, which is handy for dragging several
 files in or out at once.
@@ -48,6 +48,31 @@ The folder opens in a Finder window. Drag files out to copy them to your Mac,
 drag files in to upload them (up to 25 MB each), or move a file to the Trash
 to delete it from the Pi. Renaming files and making folders aren't
 supported. When you're done, eject it like any other disk.
+
+## On Windows: File Explorer (Map network drive)
+
+Windows can open the folder as a network drive, with a letter of its own.
+It uses Windows' built-in WebDAV support (the WebClient service), which is
+included in Windows 10 and 11.
+
+1. Open **File Explorer**, right-click **This PC**, and choose
+   **Map network drive…** (in Windows 11, it may be under **Show more
+   options**).
+2. Pick a drive letter, and for **Folder** type the Pi's address, for
+   example `http://10.0.1.111/`. Tick **Reconnect at sign-in** if you'd like
+   it back every time. Leave **Connect using different credentials**
+   unticked, since there's no login.
+3. Click **Finish**. The folder opens as a new drive under This PC.
+
+Drag files out to copy them to your PC, or drag files in to upload them (up
+to 25 MB each). Deleting a file there deletes it from the Pi right away; it
+doesn't go to the Recycle Bin. Renaming files and making folders aren't
+supported. To remove the drive, right-click it under This PC and choose
+**Disconnect**.
+
+If Windows says it can't find or reach the folder, the WebClient service is
+probably stopped: open **Services**, find **WebClient**, set its startup
+type to **Automatic**, and click **Start**. Then try again.
 
 ## zouk and huck
 
