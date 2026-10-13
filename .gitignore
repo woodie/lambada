@@ -45,3 +45,6 @@ go.work.sum
 # JS lint/test tooling (public/script.js's package.json)
 node_modules
 package-lock.json
+
+# npm run serve's local scans folder
+/scans-dev
