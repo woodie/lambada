@@ -188,7 +188,7 @@ describe('renderScans', () => {
 
   it('shows how long ago the scan arrived', () => {
     subject()
-    expect(list.querySelector('span').textContent).toBe('3 minutes ago')
+    expect(list.querySelector('span.age').textContent).toBe('3 minutes ago')
   })
 
   it("gives the delete button the scan's address", () => {
@@ -262,7 +262,7 @@ describe('start', () => {
       beforeEach(() => vi.advanceTimersByTime(60_000))
 
       it('updates the age without asking the server again', () => {
-        expect(list().querySelector('span').textContent).toBe('4 minutes ago')
+        expect(list().querySelector('span.age').textContent).toBe('4 minutes ago')
         expect(requests('PROPFIND')).toHaveLength(1)
       })
     })
@@ -411,7 +411,7 @@ describe('start', () => {
   context('clicking somewhere other than a delete button', () => {
     beforeEach(async () => {
       await subject()
-      list().querySelector('span').click()
+      list().querySelector('span.age').click()
       await flush()
     })
 

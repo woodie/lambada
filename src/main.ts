@@ -51,11 +51,16 @@ export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void 
     remove.dataset.href = scan.href
     remove.textContent = '🗑️'
 
+    const size = doc.createElement('span')
+    size.className = 'size'
+    size.textContent = humanSize(scan.size)
+
     const link = doc.createElement('a')
     link.href = scan.href
-    link.textContent = `📄 ${humanSize(scan.size)}`
+    link.append('📄 ', size)
 
     const when = doc.createElement('span')
+    when.className = 'age'
     when.textContent = age(scan, now)
 
     const item = doc.createElement('li')

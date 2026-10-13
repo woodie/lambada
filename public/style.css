@@ -4,22 +4,30 @@ body {
 	max-width: 600px;
 }
 
+/* One grid for the whole list, so each column lines up across rows:
+   delete button, link (icon left, size right-aligned), age. */
 ul {
 	list-style-type: none;
 	padding: 0;
+	display: grid;
+	grid-template-columns: auto max-content auto;
+	column-gap: 20px;
+	width: max-content;
+	max-width: 100%;
 }
 
 li {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: subgrid;
+	align-items: baseline;
 	padding: 6px;
-	display: flex;
-    justify-content: left;
-    align-items: baseline;
-}
-li span {
-	padding: 0 20px;
 }
 
 a {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5em;
 	text-decoration: none;
 	color: #0066cc;
 }
@@ -28,13 +36,17 @@ a:hover {
 	text-decoration: underline;
 }
 
+.size {
+	font-variant-numeric: tabular-nums;
+}
+
 li button.delete {
 	background: none;
 	border: none;
 	color: inherit;
 	font-size: 0.9rem;
 	line-height: 1;
-	padding: 0 20px 0 0;
+	padding: 0;
 	cursor: pointer;
 }
 
