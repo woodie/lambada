@@ -347,6 +347,69 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
 sudo netfilter-persistent save   # if installed -- otherwise this resets on reboot anyway
 ```
 
+## WebDAV (nginx)
+
+`service/lambada.nginx.conf` serves the scans folder over standard WebDAV at
+the server's root, straight from disk, with no login:
+
+- `PROPFIND` (with `Depth: 1`) lists the folder: name, size and modified
+  date per file
+- `GET` downloads a file; `DELETE` removes one
+- `LOCK`/`UNLOCK`, so Finder treats the folder as writable
+- refused: deleting the folder itself, uploads (except Finder's own hidden
+  `.DS_Store`/`._name` files, which are never listed), creating folders,
+  copying and moving
+- a browser's plain `GET /` gets the scan page from `/srv/lambada/www/`
+  (issue #20); everything else at `/` is WebDAV
+
+Any WebDAV client works: Finder (Go → Connect to Server…, `http://<pi>/`,
+connect as Guest), zouk and huck once they speak WebDAV, or `curl`. It
+replaces lambada-web's `files.json` protocol (issue #21).
+
+Install on the Pi (nginx from Raspberry Pi OS, plus the module that adds
+`PROPFIND`):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nginx libnginx-mod-http-dav-ext
+sudo cp service/lambada.nginx.conf /etc/nginx/sites-available/lambada
+sudo ln -sf /etc/nginx/sites-available/lambada /etc/nginx/sites-enabled/lambada
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+While lambada-web still needs port 80, try it on another port instead by
+installing a copy with `listen 80` changed to `listen 8081` (and the `[::]:80`
+line likewise).
+
+nginx works as the `www-data` user, so deleting needs write access to the
+folder. As the folder's owner, no sudo needed (this lets any account on the
+Pi add or remove files in this one folder):
+
+```bash
+chmod o+w /srv/lambada/attachments
+```
+
+Check the listing:
+
+```bash
+curl -X PROPFIND -H "Depth: 1" http://localhost/
+```
+
+### Testing the WebDAV config
+
+`spec/webdav/webdav.spec.js` runs the real `service/lambada.nginx.conf` (only
+its folder paths and port swapped) in nginx, plus a real `lambada-mta`,
+against a temp folder: listing, download, delete, locking, every refused
+request, Finder's hidden files, and a scan emailed over SMTP showing up in the
+listing. `spec/webdav/fixtures/propfind-pi.xml` is a real listing recorded
+from the Pi's nginx, for reference.
+
+On a Mac, `make test-webdav` runs it in a Debian container with the Pi's
+nginx packages (needs Docker Desktop, OrbStack or Colima); no local nginx
+needed. On Linux with `nginx` and `libnginx-mod-http-dav-ext` installed,
+`npm run test-webdav` runs it directly, as CI does.
+
 ## Reverse proxy (nginx)
 
 `lambada-web` listens on `0.0.0.0:8080` by default; nginx in front of it is
@@ -366,19 +429,11 @@ Install:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y nginx libnginx-mod-http-dav-ext
-
-# Drop the port 80 redirect, if it's there, so nginx gets port 80 (keep the port 25 one)
-sudo iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-
-# Let nginx (www-data) delete scans. Run as the folder's owner, no sudo needed;
-# this lets any account on the Pi add or remove files in this one folder.
-chmod o+w /srv/lambada/attachments
-
+sudo apt-get install -y nginx
 sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
 sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl restart nginx
+sudo nginx -t && sudo systemctl reload nginx
 
 # Switch lambada-web to loopback-only now that nginx is fronting it
 sudo systemctl edit lambada-web
@@ -392,15 +447,6 @@ Verify nginx is proxying correctly (both should return the listing page):
 ```bash
 curl -I http://localhost/            # via nginx, port 80
 curl -I http://127.0.0.1:8080/       # lambada-web directly, bypassing nginx
-```
-
-The same config also serves the scans folder over WebDAV at `/scans/`,
-straight from disk: `PROPFIND` (with `Depth: 1`) lists it, `GET` downloads a
-file and `DELETE` removes one. Deleting the folder itself, uploading, and
-creating folders are refused. Check the listing with:
-
-```bash
-curl -X PROPFIND -H "Depth: 1" http://localhost/scans/
 ```
 
 ### Rolling back to the iptables redirect

@@ -35,6 +35,14 @@ build:
 test:
 	$(GO) test ./...
 
+# Runs spec/webdav against service/lambada.nginx.conf in a Debian container
+# with the Pi's nginx packages, so no local nginx is needed. Needs Docker
+# (Docker Desktop, OrbStack or Colima). node_modules stays inside the container.
+.PHONY: test-webdav
+test-webdav:
+	docker build -q -t lambada-webdav-test spec/webdav
+	docker run --rm -v "$(CURDIR)":/lambada -v /lambada/node_modules -v lambada-webdav-go:/root/go lambada-webdav-test
+
 .PHONY: install
 install: build
 	$(SUDO) $(MKDIR) $(PREFIX)/bin
