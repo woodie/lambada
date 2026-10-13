@@ -84,7 +84,7 @@ export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void 
 // Wires the page up.
 export function start (env: Env = globalThis): Promise<void> {
   const { document } = env
-  const list = document.getElementById('scans') as HTMLElement
+  const list = document.getElementById('files') as HTMLElement
   const status = document.getElementById('status') as HTMLElement
   const picker = document.getElementById('upload') as HTMLInputElement
   const pickerButton = document.getElementById('upload-button') as HTMLElement

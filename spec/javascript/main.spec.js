@@ -255,7 +255,7 @@ describe('start', () => {
   let env, listing, deleteStatus, putStatus, visibility
 
   const subject = async () => { await start(env); await flush() }
-  const list = () => document.getElementById('scans')
+  const list = () => document.getElementById('files')
   const status = () => document.getElementById('status')
   const reply = (code, body = null) => Promise.resolve(new Response(body, { status: code }))
   const requests = (method) => env.fetch.mock.calls.filter(([, options]) => options.method === method)
