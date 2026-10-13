@@ -1,0 +1,15 @@
+[Unit]
+Description=Lambada (SMTP server that saves emailed scans)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+# The folder nginx serves (service/lambada.nginx.conf). Provisioned by
+# `make install`, chowned to whoever ran it; see docs/DEVELOPMENT.md.
+Environment=LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments
+ExecStart=/usr/local/bin/lambada
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

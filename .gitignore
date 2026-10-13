@@ -9,10 +9,8 @@
 *.dylib
 *.swp
 
-# Build output (root-anchored so this doesn't also match the
-# cmd/lambada-mta/ and cmd/lambada-web/ source directories)
-/lambada-mta
-/lambada-web
+# Build output
+/lambada
 
 # Go modules download cache
 vendor/
@@ -42,6 +40,12 @@ go.work.sum
 # env file
 .env
 
-# JS lint/test tooling (public/script.js's package.json)
+# JS lint/test tooling
 node_modules
 package-lock.json
+
+# npm run serve's local scans folder
+/scans-dev
+
+# vitest --coverage report
+/coverage

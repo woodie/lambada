@@ -1,30 +1,32 @@
 {
   "name": "lambada",
   "private": true,
-  "description": "Lint/test task runner for lambada (JS via npm scripts, Go via golangci-lint/gorderly)",
+  "type": "module",
+  "description": "The scan page (TypeScript, built by Vite) and the lint/test task runner for lambada",
   "scripts": {
+    "build": "vite build",
     "test": "vitest run && go test -v ./... | gorderly -fv",
-    "lint-js": "standard --fix",
-    "test-js": "vitest run",
+    "lint-js": "eslint --fix .",
+    "typecheck": "tsc --noEmit",
+    "test-js": "vitest run --coverage",
     "lint-go": "golangci-lint run --fix",
     "test-go": "go test -v ./... | gorderly -fv",
-    "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
+    "lint-html": "html-validate public/",
     "format-go": "go fmt ./...",
-    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
-    "test-webdav": "vitest run --config vitest.webdav.config.js"
+    "check": "eslint . && tsc --noEmit && vitest run --coverage --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
+    "test-webdav": "vitest run --config vitest.webdav.config.js",
+    "serve": "node scripts/dev-server.mjs"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
+    "bootstrap-icons": "^1.13.2",
+    "eslint": "^10.12.0",
     "html-validate": "^11.5.6",
-    "sinon": "^19.0.2",
-    "standard": "^17.1.2",
-    "vitest": "^4.1.10"
-  },
-  "standard": {
-    "env": [
-      "browser"
-    ],
-    "globals": [
-      "context"
-    ]
+    "humane-ts": "github:woodie/humane-ts#v0.1.0",
+    "jsdom": "^30.1.2",
+    "neostandard": "^0.14.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11"
   }
 }

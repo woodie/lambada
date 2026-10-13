@@ -1,0 +1,132 @@
+body {
+	font-family: sans-serif;
+	padding: 20px;
+}
+
+/* One grid for the whole list, like a Finder list view, so each column
+   lines up across rows: delete button, name, size (right-aligned), age. */
+ul {
+	list-style-type: none;
+	padding: 0;
+	display: grid;
+	/* A very long name wraps rather than pushing the other columns off screen. */
+	grid-template-columns: auto fit-content(30em) max-content auto;
+	column-gap: 20px;
+	width: max-content;
+	max-width: 100%;
+}
+
+/* Rows are quiet gray; the file you point at turns blue (see below). */
+li {
+	color: #666;
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: subgrid;
+	align-items: baseline;
+	padding: 6px;
+}
+
+/* The icon is a fixed width and hangs to the left of the name, so a wrapped
+   name and a phone's second line both start exactly where the name does. */
+.icon {
+	display: inline-block;
+	width: 1.5em;
+	text-indent: 0;
+}
+
+svg {
+	width: 1.1em;
+	height: 1.1em;
+	vertical-align: -0.15em;
+}
+
+a {
+	padding-left: 1.5em;
+	text-indent: -1.5em;
+	overflow-wrap: anywhere;
+	text-decoration: none;
+	color: inherit;
+}
+
+/* Pointing anywhere on a row (or tabbing to its link) turns the file's icon
+   and name blue. Touch screens can't hover, so there every file is shown
+   that way all the time. */
+li:hover a,
+a:focus-visible {
+	color: #0066cc;
+	text-decoration: underline;
+}
+
+@media (hover: none) {
+	a {
+		color: #0066cc;
+		text-decoration: underline;
+	}
+}
+
+/* Size and age never wrap; a long name does. */
+.size,
+.age {
+	white-space: nowrap;
+}
+
+.size {
+	justify-self: end;
+	font-variant-numeric: tabular-nums;
+}
+
+li button.delete {
+	background: none;
+	border: none;
+	color: inherit;
+	font-size: inherit;
+	line-height: 1;
+	padding: 0;
+	cursor: pointer;
+}
+
+li button.delete:hover,
+li button.delete:focus-visible {
+	color: #d93025;
+}
+
+/* While files are dragged over the page. */
+body.dropping {
+	outline: 3px dashed #0066cc;
+	outline-offset: -10px;
+}
+
+/* Phones: the name gets its own line, with the size and then the age just
+   after it on the next line (no columns to line up). */
+@media (max-width: 600px) {
+	ul {
+		display: block;
+	}
+
+	li {
+		display: flex;
+		flex-wrap: wrap;
+	}
+
+	li button.delete {
+		width: 1.1em;
+		margin-right: 20px;
+	}
+
+	a {
+		box-sizing: border-box;
+		flex: 1 1 calc(100% - 1.1em - 20px);
+	}
+
+	.size {
+		margin-left: calc(1.1em + 20px + 1.5em);
+	}
+
+	.age {
+		margin-left: 0.67em;
+	}
+}
+
+.error {
+	color: #b00020;
+}

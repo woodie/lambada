@@ -1,22 +1,22 @@
 import { spawn, execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, cpSync } from 'node:fs'
 import { connect } from 'node:net'
 import { tmpdir, userInfo } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Runs the real service/lambada.nginx.conf (with only its folder paths and
-// port swapped) and a real lambada-mta, both pointed at one temp folder.
+// port swapped) and a real lambada (the MTA), both pointed at one temp folder.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const nginxPort = Number(process.env.WEBDAV_TEST_PORT || 18080)
 const smtpPort = 2525
 const davExtModule = process.env.NGINX_DAV_EXT_MODULE || '/usr/lib/nginx/modules/ngx_http_dav_ext_module.so'
 
-function siteConfig (attachmentsDir, wwwDir) {
+function siteConfig (attachmentsDir, publicDir) {
   const original = readFileSync(path.join(root, 'service/lambada.nginx.conf'), 'utf8')
   const swaps = [
     ['root /srv/lambada/attachments;', `root ${attachmentsDir};`],
-    ['alias /srv/lambada/www/;', `alias ${wwwDir}/;`],
+    ['alias /srv/lambada/public/;', `alias ${publicDir}/;`],
     ['listen 80 default_server;', `listen 127.0.0.1:${nginxPort} default_server;`],
     ['listen [::]:80 default_server;', '']
   ]
@@ -34,7 +34,7 @@ function mainConfig (workDir) {
     `pid ${workDir}/nginx.pid;`,
     'events {}',
     'http {',
-    '  types { text/html html; application/javascript js; application/pdf pdf; }',
+    '  types { text/html html; text/css css; application/javascript js; application/pdf pdf; }',
     '  access_log off;',
     `  client_body_temp_path ${workDir}/tmp;`,
     `  proxy_temp_path ${workDir}/tmp;`,
@@ -69,17 +69,16 @@ export default async function ({ provide }) {
 
   const workDir = mkdtempSync(path.join(tmpdir(), 'lambada-webdav-'))
   const attachmentsDir = path.join(workDir, 'attachments')
-  const wwwDir = path.join(workDir, 'www')
+  const publicDir = path.join(workDir, 'public')
   mkdirSync(attachmentsDir)
-  mkdirSync(wwwDir)
-  writeFileSync(path.join(wwwDir, 'index.html'), '<!doctype html><title>Scans</title>')
+  cpSync(path.join(root, 'public'), publicDir, { recursive: true })
   mkdirSync(path.join(workDir, 'tmp'))
-  writeFileSync(path.join(workDir, 'site.conf'), siteConfig(attachmentsDir, wwwDir))
+  writeFileSync(path.join(workDir, 'site.conf'), siteConfig(attachmentsDir, publicDir))
   writeFileSync(path.join(workDir, 'nginx.conf'), mainConfig(workDir))
 
-  const mtaBin = process.env.LAMBADA_MTA_BIN || path.join(workDir, 'lambada-mta')
-  if (!process.env.LAMBADA_MTA_BIN) {
-    execFileSync('go', ['build', '-o', mtaBin, './cmd/lambada-mta'], { cwd: root, stdio: 'inherit' })
+  const mtaBin = process.env.LAMBADA_BIN || path.join(workDir, 'lambada')
+  if (!process.env.LAMBADA_BIN) {
+    execFileSync('go', ['build', '-o', mtaBin, '.'], { cwd: root, stdio: 'inherit' })
   }
 
   const nginx = spawn(process.env.NGINX_BIN || 'nginx', [
