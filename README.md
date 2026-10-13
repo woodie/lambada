@@ -53,6 +53,9 @@ Ways to get at the scans:
 
 Uploads go in the top-level folder only (no subfolders), up to 25 MB each.
 
+See [Using lambada](docs/USING.md) for step-by-step instructions, with
+screenshots, for the browser and Finder.
+
 ## Installation
 
 On the Pi, with `go` installed:
