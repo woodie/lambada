@@ -53,21 +53,13 @@ tagging. After changing `go.mod`, `go mod tidy` has to run on the Mac, and
 
 ## Current status
 
-Branch `lambada-service` (on top of `scan-page`, #20): one `lambada` service
-(the MTA, moved out of `cmd/`), lambada-web deleted (kept at the
-`lambada-web-final` tag), the page in TypeScript built into `public/main.js`,
-a Finder-style list with file-type icons, upload by PUT (Finder, the page's
-button, or drag and drop), cleanup limited to scans, docs rewritten.
-`npm run check` and `make test-webdav` pass on the Mac (Go 1.26), and the page
-was checked in Chrome via `make docker-run`. Not yet on the Pi.
+3.0.0 released (2026-10-13) and running on the Pi: one `lambada` service
+(the MTA), nginx serving the folder over WebDAV plus the Finder-style page,
+uploads from Finder, the page's button, or drag and drop. The old
+lambada-web is at the `lambada-web-final` tag. Uploads with a scan's name
+are allowed and count as scans (PR #25).
 
-Order from here:
-
-1. Push the branch and the tag; one PR (closes #20, #21 and #22).
-2. Install on the Pi (DEVELOPMENT.md, "Upgrading from lambada-mta and
-   lambada-web") and test in a browser and Finder: list, download, delete,
-   upload, and an emailed scan. Then tag a 3.0.0 release.
-3. Then zouk and huck learn PUT.
+Next: zouk and huck learn PUT, then their own releases.
 
 ## Open issues
 
