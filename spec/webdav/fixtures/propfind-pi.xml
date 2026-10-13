@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<D:multistatus xmlns:D="DAV:">
+<D:response>
+<D:href>/scans/</D:href>
+<D:propstat>
+<D:prop>
+<D:displayname>scans</D:displayname>
+<D:getlastmodified>Tue, 13 Oct 2026 00:38:31 GMT</D:getlastmodified>
+<D:resourcetype><D:collection/></D:resourcetype>
+<D:lockdiscovery/>
+<D:supportedlock>
+</D:supportedlock>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/scans/1791851911.pdf</D:href>
+<D:propstat>
+<D:prop>
+<D:displayname>1791851911.pdf</D:displayname>
+<D:getcontentlength>252184</D:getcontentlength>
+<D:getlastmodified>Tue, 13 Oct 2026 00:38:33 GMT</D:getlastmodified>
+<D:resourcetype></D:resourcetype>
+<D:lockdiscovery/>
+<D:supportedlock>
+</D:supportedlock>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+</D:multistatus>
