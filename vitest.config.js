@@ -7,8 +7,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      // www/vendor/ is copied from node_modules by `make vendor`; tests use the original.
-      { find: /^\.\/vendor\/humane\/index\.js$/, replacement: 'humane-ts' }
+      // www/lib/ is copied from node_modules by `make vendor`; tests use the original.
+      { find: /^\.\/lib\/humane\/index\.js$/, replacement: 'humane-ts' }
     ]
   }
 })

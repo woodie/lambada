@@ -1,4 +1,4 @@
-import { humanSize, distanceInTime } from './vendor/humane/index.js'
+import { humanSize, distanceInTime } from './lib/humane/index.js'
 
 const DAV = 'DAV:'
 

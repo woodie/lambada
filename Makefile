@@ -60,12 +60,12 @@ install-www:
 	$(SUDO) $(CHOWN) $(OWNER):$(GROUP) $(WWW_DIR)
 	$(CP) -R www/. $(WWW_DIR)/
 
-# Refreshes www/vendor/ from node_modules after `npm install`. The copies are
+# Refreshes www/lib/ from node_modules after `npm install`. The copies are
 # committed, so installing on the Pi needs no npm.
 .PHONY: vendor
 vendor:
-	$(MKDIR) www/vendor/humane
-	$(CP) node_modules/humane-ts/dist/*.js node_modules/humane-ts/LICENSE www/vendor/humane/
+	$(MKDIR) www/lib/humane
+	$(CP) node_modules/humane-ts/dist/*.js node_modules/humane-ts/LICENSE www/lib/humane/
 
 .PHONY: uninstall
 uninstall:

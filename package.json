@@ -30,7 +30,7 @@
       "context"
     ],
     "ignore": [
-      "www/vendor/"
+      "www/lib/"
     ]
   }
 }
