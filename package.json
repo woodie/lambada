@@ -10,7 +10,8 @@
     "test-go": "go test -v ./... | gorderly -fv",
     "lint-html": "html-validate --ext=tmpl cmd/lambada-web/views/",
     "format-go": "go fmt ./...",
-    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html"
+    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
+    "test-webdav": "vitest run --config vitest.webdav.config.js"
   },
   "devDependencies": {
     "html-validate": "^11.5.6",

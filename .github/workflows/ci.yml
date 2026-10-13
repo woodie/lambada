@@ -54,3 +54,23 @@ jobs:
       run: npm run lint-js
     - name: Run tests
       run: npm run test-js
+
+  webdav:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - name: Install nginx with WebDAV listing support
+      run: sudo apt-get update && sudo apt-get install -y nginx libnginx-mod-http-dav-ext
+    - name: Install dependencies
+      run: npm install # no package-lock.json committed, so npm ci isn't available
+    - name: Run WebDAV tests
+      run: npm run test-webdav
