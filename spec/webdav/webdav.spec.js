@@ -24,8 +24,18 @@ describe('service/lambada.nginx.conf', () => {
     it('gets the scan page', async () => {
       const response = await subject()
       expect(response.status).toBe(200)
-      expect(await response.text()).toContain('<title>Scans</title>')
+      expect(await response.text()).toContain('<title>Available Scans</title>')
     })
+  })
+
+  describe("the scan page's own files", () => {
+    for (const file of ['scans.js', 'vendor/humane/index.js', 'style.css']) {
+      it(`serves /.lambada/${file}`, async () => {
+        const response = await fetch(`${baseUrl}/.lambada/${file}`)
+        expect(response.status).toBe(200)
+        expect(response.headers.get('content-type')).toMatch(file.endsWith('.js') ? 'javascript' : 'css')
+      })
+    }
   })
 
   describe('OPTIONS', () => {

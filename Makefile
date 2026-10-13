@@ -1,5 +1,6 @@
 PREFIX?=/usr/local
 ATTACHMENTS_DIR?=/srv/lambada/attachments
+WWW_DIR?=/srv/lambada/www
 
 CP=/bin/cp -f
 MKDIR=/bin/mkdir -p
@@ -49,6 +50,22 @@ install: build
 	$(SUDO) $(CP) lambada-mta lambada-web $(PREFIX)/bin/
 	$(SUDO) $(MKDIR) $(ATTACHMENTS_DIR)
 	$(SUDO) $(CHOWN) $(OWNER):$(GROUP) $(ATTACHMENTS_DIR)
+
+# The scan page nginx serves at / (service/lambada.nginx.conf). Plain files,
+# so this only copies www/. The folder is chowned like ATTACHMENTS_DIR, so
+# updating the page later needs no sudo.
+.PHONY: install-www
+install-www:
+	$(SUDO) $(MKDIR) $(WWW_DIR)
+	$(SUDO) $(CHOWN) $(OWNER):$(GROUP) $(WWW_DIR)
+	$(CP) -R www/. $(WWW_DIR)/
+
+# Refreshes www/vendor/ from node_modules after `npm install`. The copies are
+# committed, so installing on the Pi needs no npm.
+.PHONY: vendor
+vendor:
+	$(MKDIR) www/vendor/humane
+	$(CP) node_modules/humane-ts/dist/*.js node_modules/humane-ts/LICENSE www/vendor/humane/
 
 .PHONY: uninstall
 uninstall:

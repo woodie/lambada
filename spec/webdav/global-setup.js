@@ -1,5 +1,5 @@
 import { spawn, execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, cpSync } from 'node:fs'
 import { connect } from 'node:net'
 import { tmpdir, userInfo } from 'node:os'
 import path from 'node:path'
@@ -34,7 +34,7 @@ function mainConfig (workDir) {
     `pid ${workDir}/nginx.pid;`,
     'events {}',
     'http {',
-    '  types { text/html html; application/javascript js; application/pdf pdf; }',
+    '  types { text/html html; text/css css; application/javascript js; application/pdf pdf; }',
     '  access_log off;',
     `  client_body_temp_path ${workDir}/tmp;`,
     `  proxy_temp_path ${workDir}/tmp;`,
@@ -71,8 +71,7 @@ export default async function ({ provide }) {
   const attachmentsDir = path.join(workDir, 'attachments')
   const wwwDir = path.join(workDir, 'www')
   mkdirSync(attachmentsDir)
-  mkdirSync(wwwDir)
-  writeFileSync(path.join(wwwDir, 'index.html'), '<!doctype html><title>Scans</title>')
+  cpSync(path.join(root, 'www'), wwwDir, { recursive: true })
   mkdirSync(path.join(workDir, 'tmp'))
   writeFileSync(path.join(workDir, 'site.conf'), siteConfig(attachmentsDir, wwwDir))
   writeFileSync(path.join(workDir, 'nginx.conf'), mainConfig(workDir))
