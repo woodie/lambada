@@ -5,16 +5,17 @@
   "scripts": {
     "test": "vitest run && go test -v ./... | gorderly -fv",
     "lint-js": "standard --fix",
-    "test-js": "vitest run",
+    "test-js": "vitest run --coverage",
     "lint-go": "golangci-lint run --fix",
     "test-go": "go test -v ./... | gorderly -fv",
     "lint-html": "html-validate --ext=tmpl,html cmd/lambada-web/views/ www/",
     "format-go": "go fmt ./...",
-    "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
+    "check": "standard && vitest run --coverage --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
     "test-webdav": "vitest run --config vitest.webdav.config.js",
     "serve": "node scripts/dev-server.mjs"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
     "html-validate": "^11.5.6",
     "humane-ts": "github:woodie/humane-ts",
     "jsdom": "^30.1.2",

@@ -2,71 +2,122 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { describe, it, beforeEach, expect, vi } from 'vitest'
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
 import { parseListing, age, renderScans, start } from '../../www/scans.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const piReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
+const indexHtml = readFileSync(path.join(here, '../../www/index.html'), 'utf8')
+
+// Fixed "now" for every test, so ages are exact rather than timing-dependent.
+const NOW = new Date('2026-10-13T00:41:33Z')
+const minutesAgo = (minutes) => new Date(NOW.getTime() - minutes * 60_000)
+
+// Lets pending promise callbacks (fetch, then render) run. setTimeout stays
+// real; only Date and setInterval are faked below.
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
+// A PROPFIND reply in the shape nginx sends: the folder, then one entry per file.
 function multistatus (files) {
   const folder = '<D:response><D:href>/</D:href><D:propstat><D:prop>' +
     '<D:resourcetype><D:collection/></D:resourcetype></D:prop></D:propstat></D:response>'
   const entries = files.map(({ name, size = 7, modified }) =>
     `<D:response><D:href>/${encodeURIComponent(name)}</D:href><D:propstat><D:prop>` +
-    `<D:displayname>${name}</D:displayname><D:getcontentlength>${size}</D:getcontentlength>` +
-    `<D:getlastmodified>${modified}</D:getlastmodified><D:resourcetype/></D:prop></D:propstat></D:response>`)
+    `<D:displayname>${name.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</D:displayname>` +
+    `<D:getcontentlength>${size}</D:getcontentlength>` +
+    `<D:getlastmodified>${modified.toUTCString()}</D:getlastmodified>` +
+    '<D:resourcetype/></D:prop></D:propstat></D:response>')
   return `<D:multistatus xmlns:D="DAV:">${folder}${entries.join('')}</D:multistatus>`
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+  vi.setSystemTime(NOW)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('parseListing', () => {
-  let xml, scans
+  let xml
 
   const subject = () => parseListing(xml)
 
   context('with the reply nginx gave on the Pi', () => {
-    beforeEach(() => { xml = piReply; scans = subject() })
+    beforeEach(() => { xml = piReply })
 
     it('skips the folder itself', () => {
-      expect(scans).toHaveLength(1)
+      expect(subject()).toHaveLength(1)
     })
 
     it("reads the file's name, size and address", () => {
-      expect(scans[0]).toMatchObject({ name: '1791851911.pdf', size: 252184, href: '/scans/1791851911.pdf' })
+      expect(subject()[0]).toMatchObject({ name: '1791851911.pdf', size: 252184, href: '/scans/1791851911.pdf' })
     })
 
     it('reads the modified date', () => {
-      expect(scans[0].modified.toISOString()).toBe('2026-10-13T00:38:33.000Z')
+      expect(subject()[0].modified).toEqual(new Date('2026-10-13T00:38:33Z'))
     })
   })
 
   context('with several files', () => {
     beforeEach(() => {
       xml = multistatus([
-        { name: 'older.pdf', modified: 'Mon, 12 Oct 2026 21:48:35 GMT' },
-        { name: 'newer.pdf', modified: 'Tue, 13 Oct 2026 00:38:33 GMT' }
+        { name: 'older.pdf', modified: minutesAgo(180) },
+        { name: 'newest.pdf', modified: minutesAgo(3) },
+        { name: 'oldest.pdf', modified: minutesAgo(9 * 1440) }
       ])
-      scans = subject()
     })
 
     it('lists them newest first', () => {
-      expect(scans.map((scan) => scan.name)).toEqual(['newer.pdf', 'older.pdf'])
+      expect(subject().map((scan) => scan.name)).toEqual(['newest.pdf', 'older.pdf', 'oldest.pdf'])
     })
   })
 
-  context('when an entry has no displayname', () => {
+  context('with a name that needs encoding', () => {
+    beforeEach(() => { xml = multistatus([{ name: 'scan & one.pdf', modified: minutesAgo(3) }]) })
+
+    it('keeps the plain name for display', () => {
+      expect(subject()[0].name).toBe('scan & one.pdf')
+    })
+
+    it('keeps the encoded address for requests', () => {
+      expect(subject()[0].href).toBe('/scan%20%26%20one.pdf')
+    })
+  })
+
+  context('when one entry has no date', () => {
+    beforeEach(() => {
+      xml = multistatus([{ name: 'dated.pdf', modified: minutesAgo(9 * 1440) }])
+        .replace('</D:multistatus>', '<D:response><D:href>/undated.pdf</D:href>' +
+          '<D:propstat><D:prop><D:resourcetype/></D:prop></D:propstat></D:response></D:multistatus>')
+    })
+
+    it('lists it last', () => {
+      expect(subject().map((scan) => scan.name)).toEqual(['dated.pdf', 'undated.pdf'])
+    })
+  })
+
+  context('when an entry has no displayname or date', () => {
     beforeEach(() => {
       xml = '<D:multistatus xmlns:D="DAV:"><D:response><D:href>/scan%20one.pdf</D:href>' +
         '<D:propstat><D:prop><D:resourcetype/></D:prop></D:propstat></D:response></D:multistatus>'
-      scans = subject()
     })
 
     it('takes the name from the address', () => {
-      expect(scans[0].name).toBe('scan one.pdf')
+      expect(subject()[0].name).toBe('scan one.pdf')
     })
 
     it('has no modified date', () => {
-      expect(scans[0].modified).toBeNull()
+      expect(subject()[0].modified).toBeNull()
+    })
+  })
+
+  context('with a different namespace prefix', () => {
+    beforeEach(() => { xml = multistatus([{ name: 'a.pdf', modified: minutesAgo(3) }]).replace(/D:/g, 'd:').replace('xmlns:D=', 'xmlns:d=') })
+
+    it('still reads it, since only the DAV: namespace matters', () => {
+      expect(subject().map((scan) => scan.name)).toEqual(['a.pdf'])
     })
   })
 
@@ -80,69 +131,119 @@ describe('parseListing', () => {
 })
 
 describe('age', () => {
-  const now = new Date('2026-10-13T00:41:33Z')
+  let modified
 
-  it("says how long ago the scan arrived, in humane-ts's words", () => {
-    expect(age({ modified: new Date('2026-10-13T00:38:33Z') }, now)).toBe('3 minutes ago')
+  const subject = () => age({ modified }, NOW)
+
+  context('for a scan from 3 minutes ago', () => {
+    beforeEach(() => { modified = minutesAgo(3) })
+
+    it("uses humane-ts's wording", () => {
+      expect(subject()).toBe('3 minutes ago')
+    })
   })
 
-  it('falls back when there is no date', () => {
-    expect(age({ modified: null }, now)).toBe('an unknown time')
+  context("when the server's clock is ahead of the browser's", () => {
+    beforeEach(() => { modified = minutesAgo(-3) })
+
+    it('says "in 3 minutes" rather than "ago"', () => {
+      expect(subject()).toBe('in 3 minutes')
+    })
+  })
+
+  context('with no date', () => {
+    beforeEach(() => { modified = null })
+
+    it('falls back to "an unknown time"', () => {
+      expect(subject()).toBe('an unknown time')
+    })
   })
 })
 
 describe('renderScans', () => {
-  const now = new Date('2026-10-13T00:41:33Z')
-  const scan = { href: '/1791851911.pdf', name: '1791851911.pdf', size: 225935, modified: new Date('2026-10-13T00:38:33Z') }
-  let list
+  let list, scans
+
+  const subject = () => renderScans(list, scans, NOW)
 
   beforeEach(() => {
     list = document.createElement('ul')
     list.append(document.createElement('li'))
-    renderScans(list, [scan], now)
+    scans = [{ href: '/1791851911.pdf', name: '1791851911.pdf', size: 225_935, modified: minutesAgo(3) }]
   })
 
-  it('replaces the list with one item per scan', () => {
+  it('replaces whatever the list held with one item per scan', () => {
+    subject()
     expect(list.children).toHaveLength(1)
   })
 
-  it('links to the scan, showing its size', () => {
-    const link = list.querySelector('a')
-    expect(link.getAttribute('href')).toBe('/1791851911.pdf')
-    expect(link.textContent).toBe('📄 226 KB')
+  it("links to the scan's address", () => {
+    subject()
+    expect(list.querySelector('a').getAttribute('href')).toBe('/1791851911.pdf')
   })
 
-  it('shows how long ago it arrived', () => {
+  it('shows the size in Finder\'s wording', () => {
+    subject()
+    expect(list.querySelector('a').textContent).toBe('📄 226 KB')
+  })
+
+  it('shows how long ago the scan arrived', () => {
+    subject()
     expect(list.querySelector('span').textContent).toBe('3 minutes ago')
   })
 
-  it('gives the delete button the scan\'s address', () => {
+  it("gives the delete button the scan's address", () => {
+    subject()
     expect(list.querySelector('button.delete').dataset.href).toBe('/1791851911.pdf')
+  })
+
+  context('with no scans', () => {
+    beforeEach(() => { scans = [] })
+
+    it('empties the list', () => {
+      subject()
+      expect(list.children).toHaveLength(0)
+    })
+  })
+
+  context('with a name that looks like HTML', () => {
+    beforeEach(() => { scans[0].name = '<img src=x onerror=alert(1)>.pdf' })
+
+    it('treats it as plain text', () => {
+      subject()
+      expect(list.querySelector('img')).toBeNull()
+      expect(list.querySelector('button.delete').title).toBe('Delete <img src=x onerror=alert(1)>.pdf')
+    })
   })
 })
 
 describe('start', () => {
-  let env, listing
+  let env, listing, deleteStatus, visibility
 
-  const subject = () => start(env)
+  const subject = async () => { await start(env); await flush() }
   const list = () => document.getElementById('scans')
   const status = () => document.getElementById('status')
-  const respond = (status, body = '') => Promise.resolve(new Response(body, { status }))
+  const reply = (code, body = null) => Promise.resolve(new Response(body, { status: code }))
+  const requests = (method) => env.fetch.mock.calls.filter(([, options]) => options.method === method)
+  const clickDelete = async () => { list().querySelector('button.delete').click(); await flush() }
 
   beforeEach(() => {
-    document.body.innerHTML = '<p id="status"></p><ul id="scans"></ul>'
-    listing = multistatus([{ name: 'a.pdf', modified: new Date().toUTCString() }])
+    // The real page, so these tests break if index.html and scans.js drift apart.
+    document.documentElement.innerHTML = indexHtml.replace(/^<!DOCTYPE html>\s*<html[^>]*>|<\/html>\s*$/g, '')
+    listing = multistatus([{ name: 'scan one.pdf', size: 225_935, modified: minutesAgo(3) }])
+    deleteStatus = 204
+    visibility = 'visible'
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
     env = {
       document,
       DOMParser,
-      fetch: vi.fn((url, { method }) => method === 'PROPFIND' ? respond(207, listing) : respond(204)),
+      setInterval,
+      fetch: vi.fn((url, { method }) => method === 'PROPFIND' ? reply(207, listing) : reply(deleteStatus)),
       confirm: vi.fn(() => true),
-      alert: vi.fn(),
-      setInterval: vi.fn()
+      alert: vi.fn()
     }
   })
 
-  context('when the server lists one scan', () => {
+  context('when the server lists a scan', () => {
     beforeEach(subject)
 
     it('sends PROPFIND with Depth: 1 to the root', () => {
@@ -150,12 +251,20 @@ describe('start', () => {
     })
 
     it('shows it', () => {
-      expect(list().querySelectorAll('li')).toHaveLength(1)
+      expect(list().querySelector('li').textContent).toBe('🗑️📄 226 KB3 minutes ago')
+    })
+
+    it('shows no status message', () => {
       expect(status().textContent).toBe('')
     })
 
-    it('refreshes the ages every 30 seconds', () => {
-      expect(env.setInterval).toHaveBeenCalledWith(expect.any(Function), 30_000)
+    context('and a minute passes', () => {
+      beforeEach(() => vi.advanceTimersByTime(60_000))
+
+      it('updates the age without asking the server again', () => {
+        expect(list().querySelector('span').textContent).toBe('4 minutes ago')
+        expect(requests('PROPFIND')).toHaveLength(1)
+      })
     })
   })
 
@@ -167,35 +276,92 @@ describe('start', () => {
     })
   })
 
-  context('when the listing fails', () => {
-    beforeEach(() => { env.fetch = vi.fn(() => respond(500)); return subject() })
+  context('when the server answers with an error', () => {
+    beforeEach(() => {
+      env.fetch = vi.fn(() => reply(500))
+      return subject()
+    })
 
     it('says what went wrong', () => {
       expect(status().textContent).toBe("Couldn't load the scans (status 500).")
     })
   })
 
-  describe('clicking delete', () => {
-    const click = async () => {
-      list().querySelector('button.delete').click()
+  context("when the server can't be reached", () => {
+    beforeEach(() => {
+      env.fetch = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')))
+      return subject()
+    })
+
+    it('says what went wrong', () => {
+      expect(status().textContent).toBe("Couldn't load the scans (Failed to fetch).")
+    })
+  })
+
+  describe('coming back to the tab', () => {
+    const switchTo = async (state) => {
+      visibility = state
+      document.dispatchEvent(new Event('visibilitychange'))
       await flush()
     }
 
     beforeEach(subject)
 
+    it('reloads the list', async () => {
+      listing = multistatus([])
+      await switchTo('visible')
+      expect(status().textContent).toBe('No scans yet.')
+    })
+
+    it("doesn't reload while the tab is hidden", async () => {
+      await switchTo('hidden')
+      expect(requests('PROPFIND')).toHaveLength(1)
+    })
+
+    context('after a failed load', () => {
+      beforeEach(async () => {
+        env.fetch.mockImplementationOnce(() => reply(500))
+        await switchTo('visible')
+      })
+
+      it('clears the error once the server answers again', async () => {
+        await switchTo('visible')
+        expect(status().textContent).toBe('')
+      })
+    })
+  })
+
+  describe('clicking delete', () => {
+    beforeEach(subject)
+
     it('asks first, naming when the scan arrived', async () => {
-      await click()
-      expect(env.confirm).toHaveBeenCalledWith('Delete this scan from less than a minute ago?')
+      await clickDelete()
+      expect(env.confirm).toHaveBeenCalledWith('Delete this scan from 3 minutes ago?')
+    })
+
+    context('when cancelled', () => {
+      beforeEach(async () => {
+        env.confirm.mockReturnValue(false)
+        await clickDelete()
+      })
+
+      it('deletes nothing', () => {
+        expect(requests('DELETE')).toHaveLength(0)
+      })
     })
 
     context('when confirmed', () => {
       beforeEach(async () => {
         listing = multistatus([])
-        await click()
+        await clickDelete()
       })
 
-      it("sends DELETE to the scan's address", () => {
-        expect(env.fetch).toHaveBeenCalledWith('/a.pdf', { method: 'DELETE' })
+      it("sends DELETE to the scan's encoded address", () => {
+        expect(env.fetch).toHaveBeenCalledWith('/scan%20one.pdf', { method: 'DELETE' })
+      })
+
+      it("doesn't alert", () => {
+        expect(env.alert).not.toHaveBeenCalled()
       })
 
       it('reloads the list', () => {
@@ -203,21 +369,26 @@ describe('start', () => {
       })
     })
 
-    context('when cancelled', () => {
+    context('when the server refuses (for example, locked in Finder)', () => {
       beforeEach(async () => {
-        env.confirm = vi.fn(() => false)
-        await click()
+        deleteStatus = 423
+        await clickDelete()
       })
 
-      it('deletes nothing', () => {
-        expect(env.fetch).not.toHaveBeenCalledWith('/a.pdf', expect.anything())
+      it('says the delete failed', () => {
+        expect(env.alert).toHaveBeenCalledWith('Delete failed.')
+      })
+
+      it('reloads the list anyway, so it shows what is really there', () => {
+        expect(requests('PROPFIND')).toHaveLength(2)
       })
     })
 
-    context('when the server refuses', () => {
+    context("when the server can't be reached", () => {
       beforeEach(async () => {
-        env.fetch = vi.fn((url, { method }) => method === 'PROPFIND' ? respond(207, listing) : respond(423))
-        await click()
+        env.fetch.mockImplementation((url, { method }) =>
+          method === 'PROPFIND' ? reply(207, listing) : Promise.reject(new TypeError('Failed to fetch')))
+        await clickDelete()
       })
 
       it('says the delete failed', () => {
@@ -225,15 +396,27 @@ describe('start', () => {
       })
     })
 
-    context('when the scan is already gone', () => {
+    context('when someone else already deleted it', () => {
       beforeEach(async () => {
-        env.fetch = vi.fn((url, { method }) => method === 'PROPFIND' ? respond(207, listing) : respond(404))
-        await click()
+        deleteStatus = 404
+        await clickDelete()
       })
 
-      it("doesn't complain", () => {
+      it("doesn't complain, since it's gone either way", () => {
         expect(env.alert).not.toHaveBeenCalled()
       })
+    })
+  })
+
+  context('clicking somewhere other than a delete button', () => {
+    beforeEach(async () => {
+      await subject()
+      list().querySelector('span').click()
+      await flush()
+    })
+
+    it('does nothing', () => {
+      expect(env.confirm).not.toHaveBeenCalled()
     })
   })
 })

@@ -20,7 +20,9 @@ export function parseListing (xml, { DOMParser } = globalThis) {
       modified: Number.isNaN(modified.getTime()) ? null : modified
     })
   }
-  return scans.sort((a, b) => (b.modified ?? 0) - (a.modified ?? 0))
+  // Undated entries sort last.
+  const time = (scan) => scan.modified?.getTime() ?? 0
+  return scans.sort((a, b) => time(b) - time(a))
 }
 
 export function age (scan, now) {

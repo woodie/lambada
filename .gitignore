@@ -48,3 +48,6 @@ package-lock.json
 
 # npm run serve's local scans folder
 /scans-dev
+
+# vitest --coverage report
+/coverage
