@@ -44,6 +44,19 @@ test-webdav:
 	docker build -q -t lambada-webdav-test spec/webdav
 	docker run --rm -v "$(CURDIR)":/lambada -v /lambada/node_modules -v lambada-webdav-go:/root/go lambada-webdav-test
 
+# Runs lambada's web side in Docker (Dockerfile), set up like the Pi: the scan
+# page and WebDAV at http://localhost:8080/, scans from ./scans-dev. www/ is
+# mounted live, so page edits show on reload. Ctrl-C stops it. No lambada-mta.
+# Needs Docker (Docker Desktop, OrbStack or Colima).
+.PHONY: docker-run
+docker-run:
+	$(MKDIR) scans-dev
+	docker build -t lambada-nginx .
+	docker run --rm -it --init -p 8080:80 \
+		-v "$(CURDIR)/scans-dev:/srv/lambada/attachments" \
+		-v "$(CURDIR)/www:/srv/lambada/www:ro" \
+		lambada-nginx
+
 .PHONY: install
 install: build
 	$(SUDO) $(MKDIR) $(PREFIX)/bin
