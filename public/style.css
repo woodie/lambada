@@ -26,12 +26,24 @@ li {
 
 /* The icon is a fixed width and hangs to the left of the name, so a wrapped
    name and a phone's second line both start exactly where the name does. */
-a::before {
-	content: "📄";
+.icon {
 	display: inline-block;
 	width: 1.5em;
 	text-indent: 0;
+	color: #777;
 }
+
+svg {
+	width: 1.1em;
+	height: 1.1em;
+	vertical-align: -0.15em;
+}
+
+.icon.pdf { color: #d93025; }
+.icon.image { color: #7b1fa2; }
+.icon.doc { color: #1a73e8; }
+.icon.slides { color: #e8710a; }
+.icon.sheet { color: #188038; }
 
 a {
 	padding-left: 1.5em;
@@ -59,11 +71,16 @@ a:hover {
 li button.delete {
 	background: none;
 	border: none;
-	color: inherit;
-	font-size: 0.9rem;
+	color: #888;
+	font-size: inherit;
 	line-height: 1;
 	padding: 0;
 	cursor: pointer;
+}
+
+li button.delete:hover,
+li button.delete:focus-visible {
+	color: #d93025;
 }
 
 /* While files are dragged over the page. */

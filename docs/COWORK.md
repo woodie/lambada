@@ -38,7 +38,7 @@ has the rest. None of it is needed to work on the current code.
   from `/` would land in the scans folder.
 - **Tests:** Go uses `spec` + `expect` (RSpec-style tree; never a literal `/`
   in a test name, since `spec` and `gorderly` treat it as nesting). The
-  page's tests (`spec/javascript`) keep `src/main.ts` at 100% coverage.
+  page's tests (`spec/javascript`) keep `src/` at 100% coverage.
   Lint is `neostandard` plus `tsc --noEmit`, like humane-ts.
   `spec/webdav` runs the real nginx config with a real lambada.
 

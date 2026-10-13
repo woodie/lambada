@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
 import { parseListing, age, renderScans, start } from '../../src/main.ts'
+import { fileIcon } from '../../src/icons.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const piReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
@@ -160,6 +161,19 @@ describe('age', () => {
   })
 })
 
+describe('fileIcon', () => {
+  const kind = (name) => fileIcon(name).kind
+
+  it('knows PDFs', () => expect(kind('1791851911.pdf')).toBe('pdf'))
+  it('knows images', () => expect(['a.png', 'b.jpg', 'c.jpeg', 'd.gif', 'e.heic'].map(kind)).toEqual(Array(5).fill('image')))
+  it('knows documents', () => expect(['a.doc', 'b.docx', 'c.txt'].map(kind)).toEqual(Array(3).fill('doc')))
+  it('knows slides', () => expect(['a.ppt', 'b.pptx'].map(kind)).toEqual(['slides', 'slides']))
+  it('knows spreadsheets', () => expect(['a.xls', 'b.xlsx', 'c.csv'].map(kind)).toEqual(Array(3).fill('sheet')))
+  it('ignores case', () => expect(kind('SCAN.PDF')).toBe('pdf'))
+  it('gives anything else a plain page', () => expect(['notes', 'archive.zip', '.hidden'].map(kind)).toEqual(Array(3).fill('file')))
+  it('always has an SVG', () => expect(fileIcon('archive.zip').svg).toContain('<svg'))
+})
+
 describe('renderScans', () => {
   let list, scans
 
@@ -184,6 +198,21 @@ describe('renderScans', () => {
   it('shows the name in the link', () => {
     subject()
     expect(list.querySelector('a').textContent).toBe('1791851911.pdf')
+  })
+
+  it("shows the file type's icon, hidden from screen readers", () => {
+    subject()
+    const icon = list.querySelector('a .icon')
+    expect(icon.className).toBe('icon pdf')
+    expect(icon.querySelector('svg')).not.toBeNull()
+    expect(icon.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('draws the delete button as a trash can, labeled with the name', () => {
+    subject()
+    const button = list.querySelector('button.delete')
+    expect(button.querySelector('svg')).not.toBeNull()
+    expect(button.getAttribute('aria-label')).toBe('Delete 1791851911.pdf')
   })
 
   it('shows the size in Finder\'s wording', () => {
@@ -261,7 +290,7 @@ describe('start', () => {
     })
 
     it('shows it', () => {
-      expect(list().querySelector('li').textContent).toBe('🗑️scan one.pdf226 KB3 minutes ago')
+      expect(list().querySelector('li').textContent).toBe('scan one.pdf226 KB3 minutes ago')
     })
 
     it('shows no status message', () => {

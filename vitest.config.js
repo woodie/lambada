@@ -6,7 +6,7 @@ export default defineConfig({
     include: ['spec/javascript/**/*.spec.js'],
     // With --coverage (npm run test-js, CI): the scan page is small enough to keep fully covered.
     coverage: {
-      include: ['src/main.ts'],
+      include: ['src/**/*.ts'],
       thresholds: { 100: true }
     }
   }

@@ -70,7 +70,7 @@ npm run build          # src/main.ts -> public/main.js
 npm run test           # vitest, then go test rendered by gorderly
 npm run lint-js        # eslint --fix (neostandard, see eslint.config.js)
 npm run typecheck      # tsc --noEmit
-npm run test-js        # vitest with coverage (src/main.ts must stay at 100%)
+npm run test-js        # vitest with coverage (src/ must stay at 100%)
 npm run lint-go        # golangci-lint run --fix
 npm run test-go        # go test -v ./... | gorderly -fv
 npm run lint-html      # html-validate public/
@@ -115,6 +115,12 @@ bundles it, with humane-ts, into one minified IIFE, `public/main.js`, and
 `index.html` calls `Lambada.start()`. After changing `src/` or updating
 humane-ts, run `npm run build` and commit `public/main.js`; CI fails if it's
 out of date. The Pi only ever gets the built file, so it never needs npm.
+
+Icons are [Bootstrap Icons](https://icons.getbootstrap.com) (MIT, license in
+`public/bootstrap-icons-LICENSE.txt`): `src/icons.ts` imports the few SVGs
+the page uses (file types and the trash can), and Vite inlines them into
+`main.js`, so there's no icon font to download. To show a new file type,
+import its `filetype-*.svg` there and add it to the table.
 
 ```bash
 make seed        # a few test PDFs in ./scans-dev, only if it's empty

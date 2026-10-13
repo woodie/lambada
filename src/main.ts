@@ -1,4 +1,5 @@
 import { humanSize, distanceInTime } from 'humane-ts'
+import { fileIcon, trash } from './icons.ts'
 
 const DAV = 'DAV:'
 
@@ -53,12 +54,19 @@ export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void 
     remove.type = 'button'
     remove.className = 'delete'
     remove.title = `Delete ${scan.name}`
+    remove.setAttribute('aria-label', remove.title)
     remove.dataset.href = scan.href
-    remove.textContent = '🗑️'
+    remove.innerHTML = trash
+
+    const { kind, svg } = fileIcon(scan.name)
+    const icon = doc.createElement('span')
+    icon.className = `icon ${kind}`
+    icon.setAttribute('aria-hidden', 'true')
+    icon.innerHTML = svg
 
     const link = doc.createElement('a')
     link.href = scan.href
-    link.textContent = scan.name
+    link.append(icon, scan.name)
 
     const size = doc.createElement('span')
     size.className = 'size'
