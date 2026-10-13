@@ -223,7 +223,7 @@ describe('renderScans', () => {
 })
 
 describe('start', () => {
-  let env, listing, deleteStatus, visibility
+  let env, listing, deleteStatus, putStatus, visibility
 
   const subject = async () => { await start(env); await flush() }
   const list = () => document.getElementById('scans')
@@ -237,13 +237,17 @@ describe('start', () => {
     document.documentElement.innerHTML = indexHtml.replace(/^<!DOCTYPE html>\s*<html[^>]*>|<\/html>\s*$/g, '')
     listing = multistatus([{ name: 'scan one.pdf', size: 225_935, modified: minutesAgo(3) }])
     deleteStatus = 204
+    putStatus = 201
     visibility = 'visible'
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
     env = {
       document,
       DOMParser,
       setInterval,
-      fetch: vi.fn((url, { method }) => method === 'PROPFIND' ? reply(207, listing) : reply(deleteStatus)),
+      fetch: vi.fn((url, { method }) => {
+        if (method === 'PROPFIND') return reply(207, listing)
+        return reply(method === 'PUT' ? putStatus : deleteStatus)
+      }),
       confirm: vi.fn(() => true),
       alert: vi.fn()
     }
@@ -423,6 +427,200 @@ describe('start', () => {
 
     it('does nothing', () => {
       expect(env.confirm).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('dropping files on the page', () => {
+    let files
+    const file = (name, size = 7) => ({ name, size })
+    const dragEvent = (type, props = {}) => {
+      const event = new Event(type, { cancelable: true })
+      for (const [key, value] of Object.entries(props)) Object.defineProperty(event, key, { value })
+      return event
+    }
+    const drop = async () => {
+      const event = dragEvent('drop', { dataTransfer: { files } })
+      document.dispatchEvent(event)
+      await flush()
+      return event
+    }
+
+    beforeEach(async () => {
+      files = [file('sample.png')]
+      await subject()
+    })
+
+    it('takes the drop instead of letting the browser open the file', async () => {
+      expect((await drop()).defaultPrevented).toBe(true)
+    })
+
+    it('PUTs the file under its own name', async () => {
+      await drop()
+      expect(env.fetch).toHaveBeenCalledWith('/sample.png', { method: 'PUT', body: files[0] })
+    })
+
+    it('reloads the list', async () => {
+      await drop()
+      expect(requests('PROPFIND')).toHaveLength(2)
+    })
+
+    it("doesn't alert", async () => {
+      await drop()
+      expect(env.alert).not.toHaveBeenCalled()
+    })
+
+    context('with a name that needs encoding', () => {
+      beforeEach(() => { files = [file('my file #2.pdf')] })
+
+      it('encodes it in the address', async () => {
+        await drop()
+        expect(requests('PUT')[0][0]).toBe('/my%20file%20%232.pdf')
+      })
+    })
+
+    context('with several files', () => {
+      beforeEach(() => { files = [file('a.txt'), file('b.txt')] })
+
+      it('uploads each, then reloads once', async () => {
+        await drop()
+        expect(requests('PUT').map(([url]) => url)).toEqual(['/a.txt', '/b.txt'])
+        expect(requests('PROPFIND')).toHaveLength(2)
+      })
+    })
+
+    context("with a scan's name", () => {
+      beforeEach(() => { files = [file('1791851911.pdf')] })
+
+      it("doesn't send it, and says why", async () => {
+        await drop()
+        expect(requests('PUT')).toHaveLength(0)
+        expect(env.alert).toHaveBeenCalledWith("Couldn't upload 1791851911.pdf (that name is kept for scans).")
+      })
+    })
+
+    context('over 25 MB', () => {
+      beforeEach(() => { files = [file('big.zip', 25 * 1024 * 1024 + 1)] })
+
+      it("doesn't send it, and says why", async () => {
+        await drop()
+        expect(requests('PUT')).toHaveLength(0)
+        expect(env.alert).toHaveBeenCalledWith("Couldn't upload big.zip (over 25 MB).")
+      })
+    })
+
+    context('with the name of a file already listed', () => {
+      beforeEach(() => { files = [file('scan one.pdf')] })
+
+      it('asks before replacing it', async () => {
+        await drop()
+        expect(env.confirm).toHaveBeenCalledWith('Replace scan one.pdf?')
+      })
+
+      context('when cancelled', () => {
+        beforeEach(() => env.confirm.mockReturnValue(false))
+
+        it('sends nothing', async () => {
+          await drop()
+          expect(requests('PUT')).toHaveLength(0)
+        })
+      })
+
+      context('when confirmed', () => {
+        it('replaces it', async () => {
+          await drop()
+          expect(requests('PUT')).toHaveLength(1)
+        })
+      })
+    })
+
+    context('when the server refuses', () => {
+      beforeEach(() => { putStatus = 403 })
+
+      it('says which file failed and why', async () => {
+        await drop()
+        expect(env.alert).toHaveBeenCalledWith("Couldn't upload sample.png (status 403).")
+      })
+    })
+
+    context("when the server can't be reached", () => {
+      beforeEach(() => {
+        env.fetch.mockImplementation((url, { method }) =>
+          method === 'PROPFIND' ? reply(207, listing) : Promise.reject(new TypeError('Failed to fetch')))
+      })
+
+      it('says which file failed and why', async () => {
+        await drop()
+        expect(env.alert).toHaveBeenCalledWith("Couldn't upload sample.png (Failed to fetch).")
+      })
+    })
+
+    context('when nothing usable is dropped', () => {
+      it('does nothing', async () => {
+        document.dispatchEvent(dragEvent('drop'))
+        await flush()
+        expect(requests('PUT')).toHaveLength(0)
+        expect(requests('PROPFIND')).toHaveLength(1)
+      })
+    })
+
+    describe('the outline while dragging', () => {
+      const dropping = () => document.body.classList.contains('dropping')
+
+      beforeEach(() => document.dispatchEvent(dragEvent('dragover')))
+
+      it('shows over the page', () => {
+        expect(dropping()).toBe(true)
+      })
+
+      it('stays while moving between elements on the page', () => {
+        document.dispatchEvent(dragEvent('dragleave', { relatedTarget: list() }))
+        expect(dropping()).toBe(true)
+      })
+
+      it('goes when the drag leaves the window', () => {
+        document.dispatchEvent(dragEvent('dragleave', { relatedTarget: null }))
+        expect(dropping()).toBe(false)
+      })
+
+      it('goes on drop', async () => {
+        await drop()
+        expect(dropping()).toBe(false)
+      })
+    })
+  })
+
+  describe('the upload button', () => {
+    const picker = () => document.getElementById('upload')
+
+    beforeEach(subject)
+
+    it('opens the file picker', () => {
+      const click = vi.spyOn(picker(), 'click').mockImplementation(() => {})
+      document.getElementById('upload-button').click()
+      expect(click).toHaveBeenCalled()
+    })
+
+    context('when files are picked', () => {
+      const pick = async (files) => {
+        Object.defineProperty(picker(), 'files', { configurable: true, value: files })
+        picker().dispatchEvent(new Event('change'))
+        await flush()
+      }
+
+      it('uploads them', async () => {
+        await pick([{ name: 'picked.pdf', size: 7 }])
+        expect(requests('PUT')[0][0]).toBe('/picked.pdf')
+      })
+
+      it('clears the picker, so the same file can be picked again', async () => {
+        await pick([{ name: 'picked.pdf', size: 7 }])
+        expect(picker().value).toBe('')
+      })
+
+      it('does nothing without a file list', async () => {
+        await pick(null)
+        expect(requests('PUT')).toHaveLength(0)
+      })
     })
   })
 })

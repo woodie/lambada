@@ -49,6 +49,29 @@ li button.delete {
 	cursor: pointer;
 }
 
+.upload {
+	color: #666;
+}
+
+#upload-button {
+	font: inherit;
+	color: #0066cc;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+
+#upload-button:hover {
+	text-decoration: underline;
+}
+
+/* While files are dragged over the page. */
+body.dropping {
+	outline: 3px dashed #0066cc;
+	outline-offset: -10px;
+}
+
 .error {
 	color: #b00020;
 }
