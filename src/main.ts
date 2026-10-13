@@ -85,7 +85,7 @@ export function start (env: Env = globalThis): Promise<void> {
 
   const render = () => {
     renderScans(list, scans, new Date())
-    if (!status.dataset.error) status.textContent = scans.length === 0 ? 'No scans yet.' : ''
+    if (!status.dataset.error) status.textContent = scans.length === 0 ? 'No files yet.' : ''
   }
 
   const load = async () => {
@@ -96,7 +96,7 @@ export function start (env: Env = globalThis): Promise<void> {
       delete status.dataset.error
     } catch (error) {
       status.dataset.error = 'true'
-      status.textContent = `Couldn't load the scans (${(error as Error).message}).`
+      status.textContent = `Couldn't load the files (${(error as Error).message}).`
     }
     render()
   }

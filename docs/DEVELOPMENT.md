@@ -105,8 +105,9 @@ directly, as CI does.
 
 The page is plain TypeScript with no framework: `src/main.ts` reads the
 WebDAV listing and renders it like a Finder list (name, size, age, plus a
-delete button), and uploads with `PUT`, from the "Upload files…" button or
-files dropped on the page. It checks nginx's two upload rules first (no
+delete button), and uploads with `PUT`, from the "upload files" button or
+files dropped on the page. nginx sends the page's files with
+`Cache-Control: no-cache`, so browsers pick up an update on the next load. It checks nginx's two upload rules first (no
 scan names, 25 MB at most) so it can say why, and asks before replacing a
 file with the same name. It uses
 [humane-ts](https://github.com/woodie/humane-ts) for sizes and ages. Vite

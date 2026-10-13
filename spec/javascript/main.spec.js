@@ -282,7 +282,7 @@ describe('start', () => {
     beforeEach(() => { listing = multistatus([]); return subject() })
 
     it('says so', () => {
-      expect(status().textContent).toBe('No scans yet.')
+      expect(status().textContent).toBe('No files yet.')
     })
   })
 
@@ -293,7 +293,7 @@ describe('start', () => {
     })
 
     it('says what went wrong', () => {
-      expect(status().textContent).toBe("Couldn't load the scans (status 500).")
+      expect(status().textContent).toBe("Couldn't load the files (status 500).")
     })
   })
 
@@ -304,7 +304,7 @@ describe('start', () => {
     })
 
     it('says what went wrong', () => {
-      expect(status().textContent).toBe("Couldn't load the scans (Failed to fetch).")
+      expect(status().textContent).toBe("Couldn't load the files (Failed to fetch).")
     })
   })
 
@@ -320,7 +320,7 @@ describe('start', () => {
     it('reloads the list', async () => {
       listing = multistatus([])
       await switchTo('visible')
-      expect(status().textContent).toBe('No scans yet.')
+      expect(status().textContent).toBe('No files yet.')
     })
 
     it("doesn't reload while the tab is hidden", async () => {
@@ -375,7 +375,7 @@ describe('start', () => {
       })
 
       it('reloads the list', () => {
-        expect(status().textContent).toBe('No scans yet.')
+        expect(status().textContent).toBe('No files yet.')
       })
     })
 

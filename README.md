@@ -41,7 +41,7 @@ Two pieces share one folder, `/srv/lambada/attachments`:
 Ways to get at the scans:
 
 - **A browser:** `http://<pi>/`. Download, delete, and upload with the
-  "Upload files…" button or by dropping files on the page. Browsers flag
+  "upload files" button or by dropping files on the page. Browsers flag
   downloads over plain HTTP, so expect an extra "Keep" click.
 - **Finder:** Go → Connect to Server…, `http://<pi>/`, connect as Guest.
   Drag a file into the window to upload it, for example to move files to or

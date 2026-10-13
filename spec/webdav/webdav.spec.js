@@ -24,7 +24,11 @@ describe('service/lambada.nginx.conf', () => {
     it('gets the scan page', async () => {
       const response = await subject()
       expect(response.status).toBe(200)
-      expect(await response.text()).toContain('<title>Available Scans</title>')
+      expect(await response.text()).toContain('<title>Available Files</title>')
+    })
+
+    it('has browsers check it for changes on every load', async () => {
+      expect((await subject()).headers.get('cache-control')).toBe('no-cache')
     })
   })
 
@@ -34,6 +38,11 @@ describe('service/lambada.nginx.conf', () => {
         const response = await fetch(`${baseUrl}/.lambada/${file}`)
         expect(response.status).toBe(200)
         expect(response.headers.get('content-type')).toMatch(file.endsWith('.js') ? 'javascript' : 'css')
+      })
+
+      it(`has browsers check /.lambada/${file} for changes on every load`, async () => {
+        const response = await fetch(`${baseUrl}/.lambada/${file}`)
+        expect(response.headers.get('cache-control')).toBe('no-cache')
       })
     }
   })
