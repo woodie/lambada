@@ -58,7 +58,7 @@ export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void 
 
     const link = doc.createElement('a')
     link.href = scan.href
-    link.textContent = `📄 ${scan.name}`
+    link.textContent = scan.name
 
     const size = doc.createElement('span')
     size.className = 'size'

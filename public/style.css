@@ -24,7 +24,18 @@ li {
 	padding: 6px;
 }
 
+/* The icon is a fixed width and hangs to the left of the name, so a wrapped
+   name and a phone's second line both start exactly where the name does. */
+a::before {
+	content: "📄";
+	display: inline-block;
+	width: 1.5em;
+	text-indent: 0;
+}
+
 a {
+	padding-left: 1.5em;
+	text-indent: -1.5em;
 	overflow-wrap: anywhere;
 	text-decoration: none;
 	color: #0066cc;
@@ -74,6 +85,11 @@ body.dropping {
 
 	a {
 		grid-column: 2 / -1;
+	}
+
+	.size {
+		justify-self: start;
+		margin-left: 1.5em;
 	}
 }
 

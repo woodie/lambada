@@ -183,7 +183,7 @@ describe('renderScans', () => {
 
   it('shows the name in the link', () => {
     subject()
-    expect(list.querySelector('a').textContent).toBe('📄 1791851911.pdf')
+    expect(list.querySelector('a').textContent).toBe('1791851911.pdf')
   })
 
   it('shows the size in Finder\'s wording', () => {
@@ -216,7 +216,7 @@ describe('renderScans', () => {
     it('treats it as plain text', () => {
       subject()
       expect(list.querySelector('img')).toBeNull()
-      expect(list.querySelector('a').textContent).toBe('📄 <img src=x onerror=alert(1)>.pdf')
+      expect(list.querySelector('a').textContent).toBe('<img src=x onerror=alert(1)>.pdf')
       expect(list.querySelector('button.delete').title).toBe('Delete <img src=x onerror=alert(1)>.pdf')
     })
   })
@@ -261,7 +261,7 @@ describe('start', () => {
     })
 
     it('shows it', () => {
-      expect(list().querySelector('li').textContent).toBe('🗑️📄 scan one.pdf226 KB3 minutes ago')
+      expect(list().querySelector('li').textContent).toBe('🗑️scan one.pdf226 KB3 minutes ago')
     })
 
     it('shows no status message', () => {
