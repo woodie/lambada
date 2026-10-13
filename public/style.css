@@ -5,7 +5,7 @@ body {
 }
 
 /* One grid for the whole list, so each column lines up across rows:
-   delete button, link (icon left, size right-aligned), age. */
+   delete button, link (icon and size), age. All left-aligned. */
 ul {
 	list-style-type: none;
 	padding: 0;
@@ -25,9 +25,6 @@ li {
 }
 
 a {
-	display: flex;
-	justify-content: space-between;
-	gap: 0.5em;
 	text-decoration: none;
 	color: #0066cc;
 }
