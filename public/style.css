@@ -16,7 +16,9 @@ ul {
 	max-width: 100%;
 }
 
+/* Rows are quiet gray; the file you point at turns blue (see below). */
 li {
+	color: #666;
 	display: grid;
 	grid-column: 1 / -1;
 	grid-template-columns: subgrid;
@@ -30,7 +32,6 @@ li {
 	display: inline-block;
 	width: 1.5em;
 	text-indent: 0;
-	color: #777;
 }
 
 svg {
@@ -39,22 +40,28 @@ svg {
 	vertical-align: -0.15em;
 }
 
-.icon.pdf { color: #d93025; }
-.icon.image { color: #7b1fa2; }
-.icon.doc { color: #1a73e8; }
-.icon.slides { color: #e8710a; }
-.icon.sheet { color: #188038; }
-
 a {
 	padding-left: 1.5em;
 	text-indent: -1.5em;
 	overflow-wrap: anywhere;
 	text-decoration: none;
-	color: #0066cc;
+	color: inherit;
 }
 
-a:hover {
+/* Pointing anywhere on a row (or tabbing to its link) turns the file's icon
+   and name blue. Touch screens can't hover, so there every file is shown
+   that way all the time. */
+li:hover a,
+a:focus-visible {
+	color: #0066cc;
 	text-decoration: underline;
+}
+
+@media (hover: none) {
+	a {
+		color: #0066cc;
+		text-decoration: underline;
+	}
 }
 
 /* Size and age never wrap; a long name does. */
@@ -71,7 +78,7 @@ a:hover {
 li button.delete {
 	background: none;
 	border: none;
-	color: #888;
+	color: inherit;
 	font-size: inherit;
 	line-height: 1;
 	padding: 0;

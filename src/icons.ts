@@ -22,7 +22,7 @@ const tidy = (svg: string) => svg.replace(/>\s+</g, '><').trim()
 export const trash = tidy(trashRaw)
 
 export interface FileIcon {
-  kind: string // pdf, image, doc, slides, sheet or file; style.css colors each
+  kind: string // pdf, image, doc, slides, sheet or file (a class on the icon, for styling)
   svg: string
 }
 
