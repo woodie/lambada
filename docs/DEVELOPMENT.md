@@ -371,9 +371,9 @@ sudo apt-get install -y nginx libnginx-mod-http-dav-ext
 # Drop the port 80 redirect, if it's there, so nginx gets port 80 (keep the port 25 one)
 sudo iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 
-# Let nginx (www-data) delete scans: group-writable folder, www-data in its owner's group
-sudo usermod -aG "$(stat -c %G /srv/lambada/attachments)" www-data
-sudo chmod g+w /srv/lambada/attachments
+# Let nginx (www-data) delete scans. Run as the folder's owner, no sudo needed;
+# this lets any account on the Pi add or remove files in this one folder.
+chmod o+w /srv/lambada/attachments
 
 sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
 sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
