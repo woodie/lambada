@@ -15,16 +15,21 @@ const scans = [
   { ago: 9 * 24 * 60 * minute, bytes: 640, label: 'Test scan: 9 days ago' }
 ]
 
-// A minimal valid PDF showing `label`, padded with a PDF comment to about
+// A minimal valid PDF showing one enormous `letter` (so thumbnails are easy
+// to tell apart) over a small `label`, padded with a PDF comment to about
 // `bytes`. The cross-reference offsets are computed, so viewers open it.
-function pdf (label, bytes) {
-  const text = `BT /F1 24 Tf 72 700 Td (${label}) Tj ET`
+function pdf (letter, label, bytes) {
+  // Helvetica-Bold's A-Z are 556-944 units wide; 722 (A-D) centers well enough.
+  const text = `BT /F2 500 Tf ${(612 - 0.722 * 500) / 2} 260 Td (${letter}) Tj ET\n` +
+    `BT /F1 24 Tf 72 120 Td (${label}) Tj ET`
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R ' +
+      '/Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>',
     `<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>'
   ]
   const header = '%PDF-1.4\n'
   const padding = Math.max(0, bytes - 700)
@@ -43,10 +48,10 @@ function pdf (label, bytes) {
 
 mkdirSync(folder, { recursive: true })
 const now = Math.floor(Date.now() / 1000)
-for (const { ago, bytes, label } of scans) {
+scans.forEach(({ ago, bytes, label }, i) => {
   const time = now - ago
   const file = path.join(folder, `${time}.pdf`)
-  writeFileSync(file, pdf(label, bytes))
+  writeFileSync(file, pdf('ABCD'[i], label, bytes))
   utimesSync(file, time, time)
-  console.log(`${path.relative(process.cwd(), file)}  (${label.replace('Test scan: ', '')})`)
-}
+  console.log(`${path.relative(process.cwd(), file)}  ${'ABCD'[i]}  (${label.replace('Test scan: ', '')})`)
+})
