@@ -8,9 +8,11 @@
 Have an old Scanner/Printer that requires an open relay to e-mail out scans?
 Now you can serve up scanned documents on your home network.
 
-<img width="193" height="226" alt="printer" src="https://github.com/user-attachments/assets/a1d7f795-6e4b-43ca-91a9-1d915b28fedc" />
-<img width="161" height="117" alt="piv1" src="https://github.com/user-attachments/assets/d4d1104a-7512-4310-a699-df8a36704b9b" /> &nbsp;
-<img width="345" height="188" alt="listing" src="docs/listing.png" />
+<img width="193" height="226" alt="printer" 
+     src="https://github.com/user-attachments/assets/a1d7f795-6e4b-43ca-91a9-1d915b28fedc" /><img
+     width="161" height="117" alt="piv1" 
+     src="https://github.com/user-attachments/assets/d4d1104a-7512-4310-a699-df8a36704b9b" />&nbsp;&nbsp;<img
+     width="345" height="188" alt="listing" src="docs/listing.png" />
 <br>
 <br>
 A lot of perfectly good scanners and printers end up in a landfill the
