@@ -48,6 +48,11 @@ test-webdav:
 # page and WebDAV at http://localhost:8080/, scans from ./scans-dev. www/ is
 # mounted live, so page edits show on reload. Ctrl-C stops it. No lambada-mta.
 # Needs Docker (Docker Desktop, OrbStack or Colima).
+# Adds a few test PDFs to ./scans-dev, dated minutes to days ago.
+.PHONY: seed
+seed:
+	node scripts/seed-scans.mjs scans-dev
+
 .PHONY: docker-run
 docker-run:
 	$(MKDIR) scans-dev
