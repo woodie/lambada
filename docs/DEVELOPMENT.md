@@ -4,8 +4,9 @@
 
 ```
 *.go                Go source for lambada, the SMTP server (package main)
-public/             the scan page nginx serves at / (index.html, scans.js, style.css)
-public/lib/humane/  humane-ts, copied from node_modules by `make vendor` and committed
+src/main.ts         the scan page's code (TypeScript), built by `npm run build`
+public/             what nginx serves at /: index.html, style.css, and main.js,
+                    the minified build of src/main.ts (committed)
 service/            lambada.service (systemd) and lambada.nginx.conf
 spec/javascript/    scan page tests (Vitest, jsdom)
 spec/webdav/        tests of the real nginx config plus a real lambada
@@ -64,10 +65,12 @@ curl -X PROPFIND -H "Depth: 1" http://localhost/
 ```bash
 npm install            # first time only
 
-npm run check          # standard, vitest, golangci-lint, go test, html-validate
+npm run check          # eslint, tsc, vitest, golangci-lint, go test, html-validate
+npm run build          # src/main.ts -> public/main.js
 npm run test           # vitest, then go test rendered by gorderly
-npm run lint-js        # standard --fix
-npm run test-js        # vitest with coverage (public/scans.js must stay at 100%)
+npm run lint-js        # eslint --fix (neostandard, see eslint.config.js)
+npm run typecheck      # tsc --noEmit
+npm run test-js        # vitest with coverage (src/main.ts must stay at 100%)
 npm run lint-go        # golangci-lint run --fix
 npm run test-go        # go test -v ./... | gorderly -fv
 npm run lint-html      # html-validate public/
@@ -100,15 +103,22 @@ directly, as CI does.
 
 ## Working on the scan page
 
+The page is plain TypeScript with no framework: `src/main.ts` reads the
+WebDAV listing and renders it, using
+[humane-ts](https://github.com/woodie/humane-ts) for sizes and ages. Vite
+bundles it, with humane-ts, into one minified IIFE, `public/main.js`, and
+`index.html` calls `Lambada.start()`. After changing `src/` or updating
+humane-ts, run `npm run build` and commit `public/main.js`; CI fails if it's
+out of date. The Pi only ever gets the built file, so it never needs npm.
+
 ```bash
 make seed        # a few test PDFs in ./scans-dev, dated minutes to days ago
 make docker-run  # the Pi's nginx setup in Docker at http://localhost:8080/
 npm run serve    # or a small Node stand-in, no Docker, at http://localhost:8000/
 ```
 
-`make docker-run` mounts `public/` live, so edits show on reload. After
-updating humane-ts (`npm install`), run `make vendor` and commit
-`public/lib/humane/`, so the Pi never needs npm.
+`make docker-run` mounts `public/` live, so a rebuild (`npm run build`)
+shows on reload.
 
 ## Testing lambada with swaks
 

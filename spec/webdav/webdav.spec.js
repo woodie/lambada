@@ -29,7 +29,7 @@ describe('service/lambada.nginx.conf', () => {
   })
 
   describe("the scan page's own files", () => {
-    for (const file of ['scans.js', 'lib/humane/index.js', 'style.css']) {
+    for (const file of ['main.js', 'style.css']) {
       it(`serves /.lambada/${file}`, async () => {
         const response = await fetch(`${baseUrl}/.lambada/${file}`)
         expect(response.status).toBe(200)

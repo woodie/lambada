@@ -29,15 +29,17 @@ has the rest. None of it is needed to work on the current code.
   create-only), since Finder can PUT the same name more than once while
   copying a file.
 - **No login.** Home network only, same as the open relay.
-- **The scan page is vanilla JS** (`public/`), chosen over Vue and
-  petite-vue to stay basic. humane-ts is copied into `public/lib/humane/`
-  by `make vendor` and committed, so the Pi needs no npm. Not
-  `public/vendor/`: `.gitignore` skips every `vendor/` folder. Page files are
-  addressed as `/.lambada/...`, since a relative URL from `/` would land in
-  the scans folder.
+- **The scan page is plain TypeScript, no framework** (`src/main.ts`),
+  chosen over Vue and petite-vue to stay basic. Vite (library mode, the
+  same setup as `netpress`) bundles it with humane-ts into one minified
+  IIFE, `public/main.js`, committed so the Pi needs no npm; CI checks it
+  matches `src/`. humane-ts is pinned to a git tag (`#v0.1.0`) until it's on
+  npm. Page files are addressed as `/.lambada/...`, since a relative URL
+  from `/` would land in the scans folder.
 - **Tests:** Go uses `spec` + `expect` (RSpec-style tree; never a literal `/`
   in a test name, since `spec` and `gorderly` treat it as nesting). The
-  page's tests (`spec/javascript`) keep `public/scans.js` at 100% coverage.
+  page's tests (`spec/javascript`) keep `src/main.ts` at 100% coverage.
+  Lint is `neostandard` plus `tsc --noEmit`, like humane-ts.
   `spec/webdav` runs the real nginx config with a real lambada.
 
 ## Working from the sandbox
@@ -52,12 +54,15 @@ tagging. After changing `go.mod`, `go mod tidy` has to run on the Mac, and
 
 Branch `lambada-service` (on top of `scan-page`, #20): one `lambada` service
 (the MTA, moved out of `cmd/`), lambada-web deleted, `www/` renamed
-`public/`, uploads enabled, cleanup limited to scans, docs rewritten. Not yet
-verified with Go, not yet on the Pi.
+`public/`, the page moved to TypeScript built into `public/main.js`, uploads
+enabled, cleanup limited to scans, docs rewritten. Verified in the sandbox
+(Go 1.24 tests, page tests, WebDAV tests against real nginx, the built page
+in Chromium); not yet on the Mac with Go 1.26 or on the Pi.
 
 Order from here:
 
-1. `go mod tidy`, `npm run check` and `make test-webdav` on the Mac; then
+1. `npm install`, `npm run check`, `make test-webdav` and `make docker-run`
+   on the Mac; then
    one PR from this branch, which includes `scan-page` (closes #20, #21
    and #22).
 2. Install on the Pi (DEVELOPMENT.md, "Upgrading from lambada-mta and

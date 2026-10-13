@@ -79,13 +79,6 @@ install-public:
 	$(SUDO) $(CHOWN) $(OWNER):$(GROUP) $(PUBLIC_DIR)
 	$(CP) -R public/. $(PUBLIC_DIR)/
 
-# Refreshes public/lib/ from node_modules after `npm install`. The copies are
-# committed, so installing on the Pi needs no npm.
-.PHONY: vendor
-vendor:
-	$(MKDIR) public/lib/humane
-	$(CP) node_modules/humane-ts/dist/*.js node_modules/humane-ts/LICENSE public/lib/humane/
-
 .PHONY: uninstall
 uninstall:
 	$(SUDO) $(RM) $(PREFIX)/bin/lambada

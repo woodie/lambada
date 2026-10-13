@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { parseListing, age, renderScans, start } from '../../public/scans.js'
+import { parseListing, age, renderScans, start } from '../../src/main.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const piReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
