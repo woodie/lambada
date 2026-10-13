@@ -10,7 +10,7 @@ name, if your network has one for it). No login is needed.
 Open the Pi's address. You'll see every file with its name, size and how
 long ago it arrived, newest first:
 
-<img width="345" alt="The file list in a browser" src="listing.png">
+<img width="460" alt="The file list in a browser" src="listing.png">
 
 - **Download:** click a file's name. Browsers warn about downloads over plain
   HTTP (lambada runs on your home network, without HTTPS), so expect to
