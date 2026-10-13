@@ -39,8 +39,8 @@ export function age (scan: Scan, now: Date): string {
   return distanceInTime(scan.modified, now, { whenNil: 'an unknown time' })
 }
 
-// One <li> per file: delete button, a link showing the size, and how long
-// ago the file arrived.
+// One <li> per file, like a Finder list with a trash can: delete button, a
+// link showing the name, the size, and how long ago the file arrived.
 export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void {
   const doc = list.ownerDocument
   list.replaceChildren(...scans.map((scan) => {
@@ -51,20 +51,20 @@ export function renderScans (list: HTMLElement, scans: Scan[], now: Date): void 
     remove.dataset.href = scan.href
     remove.textContent = '🗑️'
 
+    const link = doc.createElement('a')
+    link.href = scan.href
+    link.textContent = `📄 ${scan.name}`
+
     const size = doc.createElement('span')
     size.className = 'size'
     size.textContent = humanSize(scan.size)
-
-    const link = doc.createElement('a')
-    link.href = scan.href
-    link.append('📄 ', size)
 
     const when = doc.createElement('span')
     when.className = 'age'
     when.textContent = age(scan, now)
 
     const item = doc.createElement('li')
-    item.append(remove, link, when)
+    item.append(remove, link, size, when)
     return item
   }))
 }
@@ -97,7 +97,7 @@ export function start (env: Env = globalThis): Promise<void> {
   list.addEventListener('click', async (event) => {
     const button = (event.target as Element).closest<HTMLElement>('button.delete')
     const scan = button && scans.find((each) => each.href === button.dataset.href)
-    if (!scan || !env.confirm(`Delete this scan from ${age(scan, new Date())}?`)) return
+    if (!scan || !env.confirm(`Delete ${scan.name}?`)) return
     try {
       const response = await env.fetch(scan.href, { method: 'DELETE' })
       // 404: someone else deleted it first, which is what was wanted anyway.

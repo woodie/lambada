@@ -1,16 +1,16 @@
 body {
 	font-family: sans-serif;
 	padding: 20px;
-	max-width: 600px;
 }
 
-/* One grid for the whole list, so each column lines up across rows:
-   delete button, link (icon and size), age. All left-aligned. */
+/* One grid for the whole list, like a Finder list view, so each column
+   lines up across rows: delete button, name, size (right-aligned), age. */
 ul {
 	list-style-type: none;
 	padding: 0;
 	display: grid;
-	grid-template-columns: auto max-content auto;
+	/* A very long name wraps rather than pushing the other columns off screen. */
+	grid-template-columns: auto fit-content(30em) max-content auto;
 	column-gap: 20px;
 	width: max-content;
 	max-width: 100%;
@@ -25,6 +25,7 @@ li {
 }
 
 a {
+	overflow-wrap: anywhere;
 	text-decoration: none;
 	color: #0066cc;
 }
@@ -34,6 +35,7 @@ a:hover {
 }
 
 .size {
+	justify-self: end;
 	font-variant-numeric: tabular-nums;
 }
 

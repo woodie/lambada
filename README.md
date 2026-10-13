@@ -34,8 +34,8 @@ Two pieces share one folder, `/srv/lambada/attachments`:
   someone deletes it.
 - **nginx** -- serves the folder over WebDAV at `http://<pi>/`, using
   [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser
-  gets a scan page listing each file with its size and age, with download
-  and delete. WebDAV clients get the folder itself: list, download, upload
+  gets a page listing each file like Finder's list view (name, size, age),
+  with download and delete. WebDAV clients get the folder itself: list, download, upload
   and delete.
 
 Ways to get at the scans:
