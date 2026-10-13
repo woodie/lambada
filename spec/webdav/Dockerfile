@@ -9,4 +9,4 @@ RUN apt-get update \
 COPY --from=go /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:$PATH
 WORKDIR /lambada
-CMD ["sh", "-c", "npm install --no-audit --no-fund && npm run test-webdav"]
+CMD ["sh", "-c", "echo 'Installing npm packages in the container (a minute or two, quietly)...' && npm install --no-audit --no-fund --loglevel=error && echo 'Building lambada and running the WebDAV tests...' && npm run test-webdav"]
