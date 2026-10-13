@@ -53,26 +53,20 @@ tagging. After changing `go.mod`, `go mod tidy` has to run on the Mac, and
 ## Current status
 
 Branch `lambada-service` (on top of `scan-page`, #20): one `lambada` service
-(the MTA, moved out of `cmd/`), lambada-web deleted, `www/` renamed
-`public/`, the page moved to TypeScript built into `public/main.js`, uploads
-enabled, cleanup limited to scans, docs rewritten. Verified in the sandbox
-(Go 1.24 tests, page tests, WebDAV tests against real nginx, the built page
-in Chromium); not yet on the Mac with Go 1.26 or on the Pi.
+(the MTA, moved out of `cmd/`), lambada-web deleted (kept at the
+`lambada-web-final` tag), the page in TypeScript built into `public/main.js`,
+a Finder-style list with file-type icons, upload by PUT (Finder, the page's
+button, or drag and drop), cleanup limited to scans, docs rewritten.
+`npm run check` and `make test-webdav` pass on the Mac (Go 1.26), and the page
+was checked in Chrome via `make docker-run`. Not yet on the Pi.
 
 Order from here:
 
-1. `npm install`, `npm run check`, `make test-webdav` and `make docker-run`
-   on the Mac; then
-   one PR from this branch, which includes `scan-page` (closes #20, #21
-   and #22).
+1. Push the branch and the tag; one PR (closes #20, #21 and #22).
 2. Install on the Pi (DEVELOPMENT.md, "Upgrading from lambada-mta and
    lambada-web") and test in a browser and Finder: list, download, delete,
-   drag a file in to upload, and an emailed scan.
+   upload, and an emailed scan. Then tag a 3.0.0 release.
 3. Then zouk and huck learn PUT.
-
-The Pi currently runs nginx with the pre-upload config and an older
-lambada-mta build; port 80 → 8080 redirect already removed, port 25 → 2525
-kept.
 
 ## Open issues
 
