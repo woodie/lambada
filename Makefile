@@ -39,7 +39,7 @@ test:
 # (Docker Desktop, OrbStack or Colima). node_modules stays inside the container.
 .PHONY: test-webdav
 test-webdav:
-	docker build -q -t lambada-webdav-test spec/webdav
+	docker build -t lambada-webdav-test spec/webdav
 	docker run --rm -v "$(CURDIR)":/lambada -v /lambada/node_modules -v lambada-webdav-go:/root/go lambada-webdav-test
 
 # Runs lambada's web side in Docker (Dockerfile), set up like the Pi: the scan
