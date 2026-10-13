@@ -1366,6 +1366,7 @@ and petite-vue to stay as basic as possible:
   A-D on each, so thumbnails differ) into `scans-dev/`; `make docker-run`
   runs the Pi's nginx setup in Docker (web side only, never the MTA) at
   `http://localhost:8080/`. `npm run serve` is a no-Docker stand-in.
-- Not yet run: the Docker image itself (Docker Desktop still to be installed
-  on the new Mac; OrbStack was tried and is being removed), and the docs
-  update for the page.
+- `make docker-run` verified on the Mac with Docker Desktop (OrbStack was
+  tried first and is being removed): the seeded scans list with Finder-exact
+  sizes and humane ages. Still to do: the docs update for the page, then the
+  PR.
