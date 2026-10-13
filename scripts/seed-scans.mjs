@@ -1,9 +1,11 @@
 // Fills a folder with a few test scans for `make docker-run` (and zouk or
 // huck pointed at it): real one-page PDFs, named like lambada names
 // them (Unix time + .pdf), dated minutes to days ago, in a range of sizes.
+// Only seeds an empty folder (hidden files like .DS_Store don't count), so
+// running it again never piles up duplicates.
 //
 //   node scripts/seed-scans.mjs [folder]     # default ./scans-dev
-import { mkdirSync, writeFileSync, utimesSync } from 'node:fs'
+import { mkdirSync, readdirSync, writeFileSync, utimesSync } from 'node:fs'
 import path from 'node:path'
 
 const folder = path.resolve(process.argv[2] || 'scans-dev')
@@ -47,6 +49,11 @@ function pdf (letter, label, bytes) {
 }
 
 mkdirSync(folder, { recursive: true })
+const existing = readdirSync(folder).filter((name) => !name.startsWith('.'))
+if (existing.length > 0) {
+  console.log(`${path.relative(process.cwd(), folder)} already has ${existing.length} file(s); not seeding.`)
+  process.exit(0)
+}
 const now = Math.floor(Date.now() / 1000)
 scans.forEach(({ ago, bytes, label }, i) => {
   const time = now - ago

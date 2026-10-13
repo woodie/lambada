@@ -117,8 +117,8 @@ humane-ts, run `npm run build` and commit `public/main.js`; CI fails if it's
 out of date. The Pi only ever gets the built file, so it never needs npm.
 
 ```bash
-make seed        # a few test PDFs in ./scans-dev, dated minutes to days ago
-make docker-run  # the Pi's nginx setup in Docker at http://localhost:8080/
+make seed        # a few test PDFs in ./scans-dev, only if it's empty
+make docker-run  # seeds, then the Pi's nginx setup in Docker at http://localhost:8080/
 npm run serve    # or a small Node stand-in, no Docker, at http://localhost:8000/
 ```
 
