@@ -11,7 +11,8 @@
     "lint-html": "html-validate --ext=tmpl,html cmd/lambada-web/views/ www/",
     "format-go": "go fmt ./...",
     "check": "standard && vitest run --reporter=dot && golangci-lint run && LOG_QUIET=1 go test ./... && npm run lint-html",
-    "test-webdav": "vitest run --config vitest.webdav.config.js"
+    "test-webdav": "vitest run --config vitest.webdav.config.js",
+    "serve": "node scripts/dev-server.mjs"
   },
   "devDependencies": {
     "html-validate": "^11.5.6",
