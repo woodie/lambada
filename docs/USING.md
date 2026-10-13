@@ -28,21 +28,21 @@ The page works on a phone too: tap a name to open the file, and use
 Finder can open the folder like a disk, which is handy for dragging several
 files in or out at once.
 
-1. In Finder, choose **Go → Connect to Server…** (⌘K), type the Pi's address,
-   and click **Connect**. Click **+** first if you'd like to keep it under
-   Favorite Servers.
+In Finder, choose **Go → Connect to Server…** (⌘K), type the Pi's address,
+and click **Connect**. Click **+** first if you'd like to keep it under
+Favorite Servers.
 
-   <img width="486" alt="Connect to Server, with the Pi's address" src="connect.png">
+   <img width="486" style="border: thin solid lightgray; border-radius: 16px" alt="Connect to Server, with the Pi's address" src="connect.png">
 
-2. Finder warns that the connection isn't secure, because it's plain HTTP.
-   That's expected on your home network, and you won't be sending a
-   password. Click **Connect**.
+Finder warns that the connection isn't secure, because it's plain HTTP.
+That's expected on your home network, and you won't be sending a
+password. Click **Connect**.
 
-   <img width="260" alt="The Unsecured Connection warning" src="unsecure.png">
+   <img width="260" style="border: thin solid lightgray; border-radius: 32px" alt="The Unsecured Connection warning" src="unsecure.png">
 
-3. Choose **Guest** and click **Connect**.
+Choose **Guest** and click **Connect**.
 
-   <img width="430" alt="Connect As: Guest" src="guest.png">
+   <img width="430" style="border: thin solid lightgray; border-radius: 16px" alt="Connect As: Guest" src="guest.png">
 
 The folder opens in a Finder window. Drag files out to copy them to your Mac,
 drag files in to upload them (up to 25 MB each), or move a file to the Trash
