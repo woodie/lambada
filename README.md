@@ -24,80 +24,66 @@ past the cloud feature's death, on hardware as small as a Pi Zero.
 
 ## How it works
 
-This repo builds two independent binaries that share the same
-`attachments/` directory:
+Two pieces share one folder, `/srv/lambada/attachments`:
 
-- **`lambada-mta`** -- a minimal SMTP server. The scanner emails scans to
-  the Pi over SMTP; `lambada-mta` receives the message, decodes the
-  attachment, and saves it with an epoch-based filename (e.g.
-  `1779867473.pdf`) to `attachments/`. Files older than 24 hours are
-  cleaned up on each incoming message.
-- **`lambada-web`** -- serves a listing of those files over HTTP: a page
-  with download links, human-readable file sizes, and "time ago"
-  timestamps, plus a `GET /files.json` API used by the
-  [zouk](https://github.com/woodie/zouk) Mac client. This is a Go port of
-  the [scandalous](https://github.com/woodie/scandalous) project's Sinatra
-  web server.
+- **`lambada`** -- a minimal SMTP server, the one thing this repo builds.
+  The scanner emails a scan to the Pi; `lambada` decodes the attachment and
+  saves it with an epoch-based name (e.g. `1779867473.pdf`). Each time a
+  scan arrives, scans older than 24 hours are deleted. Only files named like
+  that (ten digits, `.pdf`) are ever deleted; anything else stays until
+  someone deletes it.
+- **nginx** -- serves the folder over WebDAV at `http://<pi>/`, using
+  [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser
+  gets a scan page listing each file with its size and age, with download
+  and delete. WebDAV clients get the folder itself: list, download, upload
+  and delete.
 
-The recommended way to get scans onto your Mac is `lambada-web`'s
-listing page -- either through the [zouk](https://github.com/woodie/zouk)
-client, or just a plain web browser pointed at the Pi (browsers flag
-the download as unsafe over plain HTTP, so expect an extra "Keep"
-click to confirm it anyway).
+Ways to get at the scans:
+
+- **A browser:** `http://<pi>/`. Browsers flag downloads over plain HTTP,
+  so expect an extra "Keep" click.
+- **Finder:** Go → Connect to Server…, `http://<pi>/`, connect as Guest.
+  Drag a file into the window to upload it, for example to move files to or
+  from another computer on your network.
+- **[zouk](https://github.com/woodie/zouk)** (Mac) or
+  **[huck](https://github.com/woodie/huck)**, or any other WebDAV client.
+
+Uploads go in the top-level folder only (no subfolders), up to 25 MB each,
+and can't use a scan's name.
 
 ## Installation
 
-Make sure you have `git` and `go` installed on the Pi, then...
-
-```bash
-# Pull down the project
-mkdir ~/workspace
-cd ~/workspace
-git clone git@github.com:woodie/lambada.git
-cd lambada
-
-# Fetch dependencies, build both binaries, install them to /usr/local/bin,
-# and provision /srv/lambada/attachments for the two services to share
-# (prompts for sudo only if those locations aren't already writable)
-go mod tidy
-make install
-
-# Redirect port 25 -> 2525 so lambada-mta can run as a non-root user.
-# lambada-web doesn't need this -- it's reachable directly on 0.0.0.0:8080.
-sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
-
-# Install and start both services
-sudo cp service/lambada-mta.service service/lambada-web.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now lambada-mta lambada-web
-sudo systemctl status lambada-mta lambada-web --no-pager
-
-# Scan something and watch the logs
-sudo tail -f /var/log/syslog
-```
-
-At this point `lambada-web` is already reachable on the LAN at
-`http://<pi>:8080/` -- nginx below is entirely optional.
-
-### Optional: front lambada-web with nginx on port 80
-
-Skip this unless you specifically want `lambada-web` reachable on plain
-`http://<pi>/` (port 80) instead of `:8080`:
+On the Pi, with `go` installed:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y nginx
-sudo cp service/lambada-web.nginx.conf /etc/nginx/sites-available/lambada-web
-sudo ln -sf /etc/nginx/sites-available/lambada-web /etc/nginx/sites-enabled/lambada-web
+sudo apt-get install -y git nginx libnginx-mod-http-dav-ext iptables-persistent
+
+mkdir -p ~/workspace && cd ~/workspace
+git clone https://github.com/woodie/lambada.git
+cd lambada
+
+# Build lambada, install it to /usr/local/bin, and set up /srv/lambada
+# (prompts for sudo only if those locations aren't already writable)
+make install
+
+# Redirect port 25 -> 2525 so lambada can run as a non-root user
+sudo iptables -t nat -A PREROUTING -p tcp --dport 25 -j REDIRECT --to-port 2525
+sudo netfilter-persistent save
+
+# Start lambada (edit User= first if you don't log in as pi)
+sudo cp service/lambada.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now lambada
+sudo systemctl status lambada --no-pager
+
+# Serve the folder with nginx on port 80
+sudo cp service/lambada.nginx.conf /etc/nginx/sites-available/lambada
+sudo ln -sf /etc/nginx/sites-available/lambada /etc/nginx/sites-enabled/lambada
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
-
-# Drop lambada-web to loopback-only now that nginx is fronting it
-sudo systemctl edit lambada-web
-#   [Service]
-#   Environment=LAMBADA_WEB_LISTEN_ADDR=127.0.0.1:8080
-sudo systemctl restart lambada-web
 ```
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for testing, configuration
-details, and how to roll the nginx step back.
+Point the scanner's email settings at the Pi, scan something, and open
+`http://<pi>/`. See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating,
+testing and troubleshooting.
