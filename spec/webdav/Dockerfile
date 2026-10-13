@@ -1,5 +1,5 @@
 # Debian bookworm, like the Pi, with the same nginx WebDAV packages; plus Go
-# (to build lambada-mta) and Node (to run the suite). Used by `make test-webdav`.
+# (to build lambada) and Node (to run the suite). Used by `make test-webdav`.
 FROM golang:1.26-bookworm AS go
 
 FROM node:24-bookworm-slim

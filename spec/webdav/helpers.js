@@ -19,7 +19,7 @@ export async function propfind (url) {
   return { status: response.status, entries: parseMultistatus(await response.text()) }
 }
 
-// Speaks just enough SMTP to hand lambada-mta one message, the way a
+// Speaks just enough SMTP to hand lambada one message, the way a
 // scanner would: a multipart email with the scan as a base64 attachment.
 export function emailScan ({ port, filename, content }) {
   const boundary = 'lambada-test-boundary'

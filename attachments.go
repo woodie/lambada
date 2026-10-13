@@ -1,4 +1,4 @@
-// Attachments parses incoming mail, saves attachments to disk, and cleans up old ones.
+// Attachments parses incoming mail, saves attachments to disk, and cleans up old scans.
 package main
 
 import (
@@ -12,17 +12,19 @@ import (
 	"net/mail"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
-
-	"lambada/internal/envutil"
 )
 
-// attachmentDir and maxFileAge are overridden via LAMBADA_ATTACHMENTS_DIR; lambada-web must agree on the same directory.
+// attachmentDir is overridden via LAMBADA_ATTACHMENTS_DIR; nginx serves the same folder.
 var (
-	attachmentDir = envutil.Or("LAMBADA_ATTACHMENTS_DIR", "./attachments")
+	attachmentDir = envOr("LAMBADA_ATTACHMENTS_DIR", "./attachments")
 	maxFileAge    = 24 * time.Hour
 )
+
+// scanName matches the names processAttachments gives emailed PDFs; cleanup touches nothing else.
+var scanName = regexp.MustCompile(`^[0-9]{10}\.pdf$`)
 
 func processAttachments(msg *mail.Message) error {
 	log.Println("Receiving message")
@@ -101,7 +103,7 @@ func cleanupOldFiles() {
 		return
 	}
 	for _, entry := range entries {
-		if entry.Name() == ".DS_Store" || entry.IsDir() {
+		if entry.IsDir() || !scanName.MatchString(entry.Name()) {
 			continue
 		}
 		info, err := entry.Info()

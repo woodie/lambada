@@ -6,13 +6,13 @@ export default defineConfig({
     include: ['spec/javascript/**/*.spec.js'],
     // With --coverage (npm run test-js, CI): the scan page is small enough to keep fully covered.
     coverage: {
-      include: ['www/scans.js'],
+      include: ['public/scans.js'],
       thresholds: { 100: true }
     }
   },
   resolve: {
     alias: [
-      // www/lib/ is copied from node_modules by `make vendor`; tests use the original.
+      // public/lib/ is copied from node_modules by `make vendor`; tests use the original.
       { find: /^\.\/lib\/humane\/index\.js$/, replacement: 'humane-ts' }
     ]
   }

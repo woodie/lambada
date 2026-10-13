@@ -73,11 +73,13 @@ func TestAttachments(t *testing.T) {
 		})
 
 		describe("cleanupOldFiles", func() {
-			var pdf, dss, dir string
+			var scan, upload, dss, dir string
 
 			it.BeforeEach(func() {
-				pdf = filepath.Join(attachmentDir, "1234567890.pdf")
-				_ = os.WriteFile(pdf, []byte("data"), 0644)
+				scan = filepath.Join(attachmentDir, "1234567890.pdf")
+				_ = os.WriteFile(scan, []byte("data"), 0644)
+				upload = filepath.Join(attachmentDir, "report.pdf")
+				_ = os.WriteFile(upload, []byte("data"), 0644)
 				dss = filepath.Join(attachmentDir, ".DS_Store")
 				_ = os.WriteFile(dss, []byte("data"), 0644)
 				dir = filepath.Join(attachmentDir, "subdir")
@@ -85,23 +87,27 @@ func TestAttachments(t *testing.T) {
 			})
 
 			context("when entries are recent", func() {
-				it("keeps the PDF file", func() {
+				it("keeps the scan", func() {
 					cleanupOldFiles()
-					expect(pdf, t).To(BeAnExistingFile())
+					expect(scan, t).To(BeAnExistingFile())
 				})
 			})
 
 			context("when entries are older", func() {
 				it.BeforeEach(func() {
 					old := time.Now().Add(-25 * time.Hour)
-					_ = os.Chtimes(pdf, old, old)
-					_ = os.Chtimes(dir, old, old)
-					_ = os.Chtimes(dss, old, old)
+					for _, path := range []string{scan, upload, dss, dir} {
+						_ = os.Chtimes(path, old, old)
+					}
 				})
 
-				it("deletes the PDF file", func() {
+				it("deletes the scan", func() {
 					cleanupOldFiles()
-					expect(pdf, t).NotTo(BeAnExistingFile())
+					expect(scan, t).NotTo(BeAnExistingFile())
+				})
+				it("keeps an uploaded file", func() {
+					cleanupOldFiles()
+					expect(upload, t).To(BeAnExistingFile())
 				})
 				it("keeps the .DS_Store", func() {
 					cleanupOldFiles()

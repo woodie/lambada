@@ -1,4 +1,4 @@
-// Command lambada-mta is a tiny open-relay SMTP server that saves attachments to disk.
+// Command lambada is a tiny open-relay SMTP server that saves emailed scans to disk.
 package main
 
 import (
@@ -39,9 +39,19 @@ func (s *Session) Data(r io.Reader) error {
 	return processAttachments(msg)
 }
 
+// envOr returns the named environment variable, or fallback if unset/empty.
+func envOr(name, fallback string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return fallback
+}
+
 // LOG_QUIET silences all logging (see package.json's check script).
 func init() {
-	if os.Getenv("LOG_QUIET") != "" { log.SetOutput(io.Discard) }
+	if os.Getenv("LOG_QUIET") != "" {
+		log.SetOutput(io.Discard)
+	}
 }
 
 func main() {

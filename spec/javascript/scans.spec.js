@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { parseListing, age, renderScans, start } from '../../www/scans.js'
+import { parseListing, age, renderScans, start } from '../../public/scans.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const piReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
-const indexHtml = readFileSync(path.join(here, '../../www/index.html'), 'utf8')
+const indexHtml = readFileSync(path.join(here, '../../public/index.html'), 'utf8')
 
 // Fixed "now" for every test, so ages are exact rather than timing-dependent.
 const NOW = new Date('2026-10-13T00:41:33Z')

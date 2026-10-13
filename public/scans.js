@@ -29,7 +29,7 @@ export function age (scan, now) {
   return distanceInTime(scan.modified, now, { whenNil: 'an unknown time' })
 }
 
-// One <li> per scan, matching lambada-web's old page: delete button, a link
+// One <li> per file: delete button, a link
 // showing the size, and how long ago the scan arrived.
 export function renderScans (list, scans, now) {
   const doc = list.ownerDocument

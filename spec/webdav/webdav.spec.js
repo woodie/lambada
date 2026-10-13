@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync } from 'node:fs'
 import path from 'node:path'
 import { describe, it, beforeEach, expect, inject } from 'vitest'
 import { propfind, emailScan } from './helpers.js'
@@ -129,12 +129,21 @@ describe('service/lambada.nginx.conf', () => {
       })
     })
 
-    context('uploading a file', () => {
-      beforeEach(() => { method = 'PUT'; url = `${baseUrl}/upload.pdf`; body = 'x' })
+    context('uploading into a subfolder', () => {
+      beforeEach(() => { method = 'PUT'; url = `${baseUrl}/folder/upload.pdf`; body = 'x' })
 
       it('responds 403 and creates nothing', async () => {
         expect((await subject()).status).toBe(403)
-        expect(onDisk('upload.pdf')).toBe(false)
+        expect(onDisk('folder')).toBe(false)
+      })
+    })
+
+    context("uploading over a scan's name", () => {
+      beforeEach(() => { method = 'PUT'; url = `${baseUrl}/1791851911.pdf`; body = 'x' })
+
+      it('responds 403 and keeps the scan', async () => {
+        expect((await subject()).status).toBe(403)
+        expect(readFileSync(path.join(attachmentsDir, '1791851911.pdf')).equals(scan)).toBe(true)
       })
     })
 
@@ -163,6 +172,28 @@ describe('service/lambada.nginx.conf', () => {
     })
   })
 
+  describe('uploading a file (PUT)', () => {
+    const uploaded = Buffer.from('%PDF-1.4 uploaded')
+    const subject = () => fetch(`${baseUrl}/${encodeURIComponent('My Upload.pdf')}`, { method: 'PUT', body: uploaded })
+
+    it('responds 201 and saves the bytes', async () => {
+      expect((await subject()).status).toBe(201)
+      expect(readFileSync(path.join(attachmentsDir, 'My Upload.pdf')).equals(uploaded)).toBe(true)
+    })
+
+    it('lists it', async () => {
+      await subject()
+      const names = (await propfind(`${baseUrl}/`)).entries.map((entry) => entry.name)
+      expect(names).toContain('My Upload.pdf')
+    })
+
+    it('accepts one as big as an emailed scan', async () => {
+      const big = Buffer.alloc(20 * 1024 * 1024, 1)
+      const response = await fetch(`${baseUrl}/big.pdf`, { method: 'PUT', body: big })
+      expect(response.status).toBe(201)
+    })
+  })
+
   describe("Finder's hidden files", () => {
     const subject = () => fetch(`${baseUrl}/.DS_Store`, { method: 'PUT', body: 'finder' })
 
@@ -177,7 +208,7 @@ describe('service/lambada.nginx.conf', () => {
     })
   })
 
-  describe('a scan emailed to lambada-mta', () => {
+  describe('a scan emailed to lambada', () => {
     const emailed = Buffer.from('%PDF-1.4 emailed scan')
     const subject = async () => {
       await emailScan({ port: smtpPort, filename: 'scan.pdf', content: emailed })
@@ -192,6 +223,24 @@ describe('service/lambada.nginx.conf', () => {
     it('shows up in the WebDAV listing', async () => {
       const newFile = await subject()
       expect(newFile?.name).toMatch(/^\d+\.pdf$/)
+    })
+
+    context('when older files are in the folder', () => {
+      beforeEach(() => {
+        const old = new Date(Date.now() - 25 * 60 * 60 * 1000)
+        writeFileSync(path.join(attachmentsDir, 'old upload.pdf'), 'x')
+        for (const name of ['1791851911.pdf', 'old upload.pdf']) utimesSync(path.join(attachmentsDir, name), old, old)
+      })
+
+      it('removes old scans', async () => {
+        await subject()
+        expect(onDisk('1791851911.pdf')).toBe(false)
+      })
+
+      it('keeps old uploads', async () => {
+        await subject()
+        expect(onDisk('old upload.pdf')).toBe(true)
+      })
     })
 
     it('downloads with the same bytes that were emailed', async () => {

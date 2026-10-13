@@ -1,5 +1,5 @@
 // Fills a folder with a few test scans for `make docker-run` (and zouk or
-// huck pointed at it): real one-page PDFs, named like lambada-mta names
+// huck pointed at it): real one-page PDFs, named like lambada names
 // them (Unix time + .pdf), dated minutes to days ago, in a range of sizes.
 //
 //   node scripts/seed-scans.mjs [folder]     # default ./scans-dev

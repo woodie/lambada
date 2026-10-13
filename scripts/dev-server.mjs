@@ -1,4 +1,4 @@
-// Works on the scan page with no nginx and no Pi: serves www/ the way
+// Works on the scan page with no nginx and no Pi: serves public/ the way
 // service/lambada.nginx.conf does (index.html at /, the rest under
 // /.lambada/), and answers the three WebDAV requests the page makes --
 // PROPFIND (Depth: 1), GET and DELETE -- from a local folder of scans.
@@ -12,7 +12,7 @@ import { readdir, stat, rm, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
-const www = path.join(root, 'www')
+const publicDir = path.join(root, 'public')
 const scans = path.resolve(process.env.LAMBADA_DEV_SCANS || path.join(root, 'scans-dev'))
 const port = Number(process.env.PORT || 8000)
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.pdf': 'application/pdf' }
@@ -71,9 +71,9 @@ await mkdir(scans, { recursive: true })
 
 http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, 'http://localhost')
-  if (req.method === 'GET' && pathname === '/') return sendFile(res, path.join(www, 'index.html'))
+  if (req.method === 'GET' && pathname === '/') return sendFile(res, path.join(publicDir, 'index.html'))
   if (req.method === 'GET' && pathname.startsWith('/.lambada/')) {
-    const file = inside(www, pathname.slice('/.lambada'.length))
+    const file = inside(publicDir, pathname.slice('/.lambada'.length))
     return file ? sendFile(res, file) : res.writeHead(403).end()
   }
   if (req.method === 'PROPFIND' && pathname === '/') return propfind(res)
