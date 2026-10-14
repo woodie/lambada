@@ -84,10 +84,9 @@ and delete files. Renaming and making folders aren't supported.
 
 ## Native clients
 
-[zouk](https://github.com/woodie/zouk) (for macOS) and
-[huck](https://github.com/woodie/huck) (for Windows and macOS) are small apps
-that show lambada's scans as a grid of thumbnails and download them with one
-click, without the browser's download warnings.
+[Zouk](https://github.com/woodie/zouk) (for macOS) and
+[Huck](https://github.com/woodie/huck) (for Windows)
+are native apps that optimize the experience of downloading scans.
 
 ## Good to know
 

@@ -40,7 +40,7 @@ Two pieces share one folder, `/srv/lambada/attachments`:
   with download, upload and delete. WebDAV clients get the folder itself:
   list, download, upload and delete.
 
-The server uses WebDAV, so there are [many ways](docs/USAGE.md)
+The server uses WebDAV, so there are [several ways](docs/USAGE.md)
 to download scans.
 
 ## Installation
@@ -76,7 +76,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-## Setting up the scanner
+## Scanner configuration
 
 Open the scanner's own settings page (usually its IP address in a browser)
 and find its e-mail or SMTP settings:
