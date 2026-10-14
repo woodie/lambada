@@ -40,7 +40,7 @@ Two pieces share one folder, `/srv/lambada/attachments`:
   with download, upload and delete. WebDAV clients get the folder itself:
   list, download, upload and delete.
 
-The server uses WebDAV, so there are [many ways to connect](docs/USAGE.md)
+The server uses WebDAV, so there are [many ways](docs/USAGE.md)
 to download scans.
 
 ## Installation
@@ -76,6 +76,19 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Point the scanner's email settings at the Pi, scan something, and open
-`http://<pi>/`. See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating,
-testing and troubleshooting.
+## Setting up the scanner
+
+Open the scanner's own settings page (usually its IP address in a browser)
+and find its e-mail or SMTP settings:
+
+- Turn on sending e-mail directly from the scanner.
+- Set the **SMTP Gateway** (or SMTP server) to the IP address of your Pi.
+- Set the **SMTP Port** to `25`.
+- Leave login, SSL and TLS off. lambada accepts mail from anyone on your
+  network, so no account is needed.
+- The "From" address and the address you scan to can be anything; lambada
+  keeps the attachment and ignores the rest.
+
+Scan something to e-mail, then open `http://<pi>/` to see it. See
+[DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating, testing and
+troubleshooting.
