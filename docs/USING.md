@@ -74,9 +74,9 @@ If Windows says it can't find or reach the folder, the WebClient service is
 probably stopped: open **Services**, find **WebClient**, set its startup
 type to **Automatic**, and click **Start**. Then try again.
 
-## zouk and huck
+## Native clients: zouk and huck
 
-[zouk](https://github.com/woodie/zouk) (for macOS) and
+Native clients: [zouk](https://github.com/woodie/zouk) (for macOS) and
 [huck](https://github.com/woodie/huck) (for Windows and macOS) are small apps
 that show lambada's scans as a grid of thumbnails and download them with one
 click, without the browser's download warnings.

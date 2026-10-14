@@ -50,9 +50,9 @@ Ways to get at the scans:
   from another computer on your network.
 - **Windows File Explorer:** Map network drive…, with `http://<pi>/` as the
   folder.
-- **[zouk](https://github.com/woodie/zouk)** (macOS) or
-  **[huck](https://github.com/woodie/huck)** (Windows and macOS), which show
-  scans as a grid of thumbnails, or any other WebDAV client.
+- **Native clients:** [zouk](https://github.com/woodie/zouk) (macOS) and
+  [huck](https://github.com/woodie/huck) (Windows and macOS) show scans as a
+  grid of thumbnails. Any other WebDAV client works too.
 
 Uploads go in the top-level folder only (no subfolders), up to 25 MB each.
 
