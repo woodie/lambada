@@ -1,0 +1,11 @@
+{
+  "name": "qvick",
+  "version": "0.0.0",
+  "description": "Quick's justBeforeEach for Vitest",
+  "type": "module",
+  "exports": "./index.js",
+  "peerDependencies": {
+    "@vitest/runner": "^4.1.0",
+    "vitest": "^4.1.0"
+  }
+}
