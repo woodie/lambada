@@ -86,8 +86,10 @@ and find its e-mail or SMTP settings:
 - Set the **SMTP Port** to `25`.
 - Leave login, SSL and TLS off. lambada accepts mail from anyone on your
   network, so no account is needed.
-- The "From" address and the address you scan to can be anything; lambada
-  keeps the attachment and ignores the rest.
+- The sender doesn't matter: the "From" address, display name and default
+  subject can be anything, and so can the address you scan to. lambada never
+  sends mail on; it saves the attached scan and throws the rest of the
+  message away.
 
 Scan something to e-mail, then open `http://<pi>/` to see it. See
 [DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating, testing and
