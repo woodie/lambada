@@ -87,9 +87,12 @@ and find its e-mail or SMTP settings:
 - Leave login, SSL and TLS off. lambada accepts mail from anyone on your
   network, so no account is needed.
 - The sender doesn't matter: the "From" address, display name and default
-  subject can be anything, and so can the address you scan to. lambada never
-  sends mail on; it saves the attached scan and throws the rest of the
-  message away.
+  subject can be anything.
+- Add a contact to scan to, such as "Scans" at `scans@example.com`. The
+  address is never used: the e-mail is never delivered anywhere, because
+  lambada saves the attached scan and throws the rest of the message away.
+  So any address will do, and naming the contact after the Pi (for example
+  "Scans: 10.0.1.111") makes it easy to pick on the scanner's screen.
 
 Scan something to e-mail, then open `http://<pi>/` to see it. See
 [DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating, testing and
