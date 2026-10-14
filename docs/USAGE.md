@@ -29,23 +29,24 @@ Finder can open the folder like a disk, which is handy for dragging several
 files in or out at once.
 
 In Finder, choose **Go → Connect to Server…** (⌘K), type the Pi's address,
-and click **Connect**. Click **+** first if you'd like to keep it under
-Favorite Servers. Finder warns that the connection isn't secure, because it's plain HTTP.
-That's expected on your home network, and you won't be sending a
-password. Click **Connect**.
+and click **Connect**. Finder warns that the connection is unsecured, which
+is expected for plain HTTP on your home network, so click **Connect** again.
 
-   <img width="486" alt="Connect to Server, with the Pi's address" src="connect.png"> &nbsp;
-   <img width="260" alt="The Unsecured Connection warning" src="unsecure.png">
+<img height="180" alt="Connect to Server, with the Pi's address" src="connect.png"> &nbsp;
+<img height="180" alt="The Unsecured Connection warning" src="unsecure.png">
 
-Choose **Guest** and click **Connect**.
+Finder then asks how to connect. Since lambada has no accounts, choose
+**Guest** and click **Connect**. The folder opens in a new Finder window,
+with previews of your scans, and shows up in the sidebar under
+**Locations** like a disk.
 
-   <img width="430" alt="Connect As: Guest" src="guest.png"> &nbsp;
-   <img width="317" alt="File listing src" src="mount.png">
+<img height="180" alt="Connect As: Guest" src="guest.png"> &nbsp;
+<img height="180" alt="The folder in Finder" src="mount.png">
 
-The folder opens in a Finder window. Drag files out to copy them to your Mac,
-drag files in to upload them (up to 25 MB each), or move a file to the Trash
-to delete it from the Pi. Renaming files and making folders aren't
-supported. When you're done, eject it like any other disk.
+Drag files out to copy them to your Mac, drag files in to upload them (up to
+25 MB each), or move a file to the Trash to delete it from the Pi. Renaming
+files and making folders aren't supported. When you're done, eject it like
+any other disk.
 
 ## On Windows: File Explorer (Map network drive)
 
