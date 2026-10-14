@@ -40,24 +40,8 @@ Two pieces share one folder, `/srv/lambada/attachments`:
   with download, upload and delete. WebDAV clients get the folder itself:
   list, download, upload and delete.
 
-Ways to get at the scans:
-
-- **A browser:** `http://<pi>/`. Download, delete, and upload with the
-  "upload files" button or by dropping files on the page. Browsers flag
-  downloads over plain HTTP, so expect an extra "Keep" click.
-- **Finder:** Go → Connect to Server…, `http://<pi>/`, connect as Guest.
-  Drag a file into the window to upload it, for example to move files to or
-  from another computer on your network.
-- **Windows File Explorer:** Map network drive…, with `http://<pi>/` as the
-  folder.
-- **Native clients:** [zouk](https://github.com/woodie/zouk) (macOS) and
-  [huck](https://github.com/woodie/huck) (Windows and macOS) show scans as a
-  grid of thumbnails. Any other WebDAV client works too.
-
-Uploads go in the top-level folder only (no subfolders), up to 25 MB each.
-
-See [Using lambada](docs/USING.md) for step-by-step instructions, with
-screenshots, for the browser, Finder and Windows File Explorer.
+The server uses WebDAV, so there are [many ways to connect](docs/USAGE.md)
+to download scans.
 
 ## Installation
 
