@@ -37,8 +37,8 @@ Two pieces share one folder, `/srv/lambada/attachments`:
 - **nginx** -- serves the folder over WebDAV at `http://<pi>/`, using
   [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser
   gets a page listing each file like Finder's list view (name, size, age),
-  with download and delete. WebDAV clients get the folder itself: list, download, upload
-  and delete.
+  with download, upload and delete. WebDAV clients get the folder itself:
+  list, download, upload and delete.
 
 Ways to get at the scans:
 
@@ -48,8 +48,11 @@ Ways to get at the scans:
 - **Finder:** Go → Connect to Server…, `http://<pi>/`, connect as Guest.
   Drag a file into the window to upload it, for example to move files to or
   from another computer on your network.
-- **[zouk](https://github.com/woodie/zouk)** (Mac) or
-  **[huck](https://github.com/woodie/huck)**, or any other WebDAV client.
+- **Windows File Explorer:** Map network drive…, with `http://<pi>/` as the
+  folder.
+- **[zouk](https://github.com/woodie/zouk)** (macOS) or
+  **[huck](https://github.com/woodie/huck)** (Windows and macOS), which show
+  scans as a grid of thumbnails, or any other WebDAV client.
 
 Uploads go in the top-level folder only (no subfolders), up to 25 MB each.
 
@@ -58,7 +61,7 @@ screenshots, for the browser, Finder and Windows File Explorer.
 
 ## Installation
 
-On the Pi, with `go` installed:
+On the Pi, with Go 1.26 or newer installed:
 
 ```bash
 sudo apt-get update
