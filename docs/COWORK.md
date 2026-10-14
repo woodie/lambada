@@ -59,7 +59,9 @@ uploads from Finder, the page's button, or drag and drop. The old
 lambada-web is at the `lambada-web-final` tag. Uploads with a scan's name
 are allowed and count as scans (PR #25).
 
-Next: zouk and huck learn PUT, then their own releases.
+The native clients caught up the same day: zouk 1.17.0 and huck 0.7.0 upload
+with PUT (drag and drop or a toolbar button), show picture thumbnails, and
+treat a 404 on delete as already gone.
 
 ## Open issues
 
