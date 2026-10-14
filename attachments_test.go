@@ -72,31 +72,36 @@ func TestAttachments(t *testing.T) {
 			})
 		})
 
+		// Only scans, named like processAttachments names them (^[0-9]{10}\.pdf$), are ever
+		// deleted. Everything else in the folder is skipped, whatever its age.
 		describe("cleanupOldFiles", func() {
-			var scan, upload, dss, dir string
+			var scan, dir string
+			var others []string
 
 			it.BeforeEach(func() {
 				scan = filepath.Join(attachmentDir, "1234567890.pdf")
 				_ = os.WriteFile(scan, []byte("data"), 0644)
-				upload = filepath.Join(attachmentDir, "report.pdf")
-				_ = os.WriteFile(upload, []byte("data"), 0644)
-				dss = filepath.Join(attachmentDir, ".DS_Store")
-				_ = os.WriteFile(dss, []byte("data"), 0644)
+				others = nil
+				for _, name := range []string{"report.pdf", "1234567890.jpg", ".DS_Store"} {
+					path := filepath.Join(attachmentDir, name)
+					_ = os.WriteFile(path, []byte("data"), 0644)
+					others = append(others, path)
+				}
 				dir = filepath.Join(attachmentDir, "subdir")
 				_ = os.Mkdir(dir, 0755)
 			})
 
-			context("when entries are recent", func() {
-				it("keeps the scan", func() {
+			context("when the scan is recent", func() {
+				it("keeps it", func() {
 					cleanupOldFiles()
 					expect(scan, t).To(BeAnExistingFile())
 				})
 			})
 
-			context("when entries are older", func() {
+			context("when everything is older than maxFileAge", func() {
 				it.BeforeEach(func() {
-					old := time.Now().Add(-25 * time.Hour)
-					for _, path := range []string{scan, upload, dss, dir} {
+					old := time.Now().Add(-maxFileAge - time.Hour)
+					for _, path := range append([]string{scan, dir}, others...) {
 						_ = os.Chtimes(path, old, old)
 					}
 				})
@@ -105,15 +110,13 @@ func TestAttachments(t *testing.T) {
 					cleanupOldFiles()
 					expect(scan, t).NotTo(BeAnExistingFile())
 				})
-				it("keeps an uploaded file", func() {
+				it("skips files not named like a scan", func() {
 					cleanupOldFiles()
-					expect(upload, t).To(BeAnExistingFile())
+					for _, path := range others {
+						expect(path, t).To(BeAnExistingFile())
+					}
 				})
-				it("keeps the .DS_Store", func() {
-					cleanupOldFiles()
-					expect(dss, t).To(BeAnExistingFile())
-				})
-				it("keeps the directory", func() {
+				it("skips directories", func() {
 					cleanupOldFiles()
 					expect(dir, t).To(BeADirectory())
 				})
