@@ -3,36 +3,45 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
+import { justBeforeEach } from 'qvick'
 import { parseListing, age, renderScans, start } from '../../src/main.ts'
 import { fileIcon } from '../../src/icons.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const piReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
+const nginxReply = readFileSync(path.join(here, '../webdav/fixtures/propfind-pi.xml'), 'utf8')
 const indexHtml = readFileSync(path.join(here, '../../public/index.html'), 'utf8')
 
-// Fixed "now" for every test, so ages are exact rather than timing-dependent.
 const NOW = new Date('2026-10-13T00:41:33Z')
 const minutesAgo = (minutes) => new Date(NOW.getTime() - minutes * 60_000)
 
-// Lets pending promise callbacks (fetch, then render) run. setTimeout stays
-// real; only Date and setInterval are faked below.
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+const escapeXml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
-// A PROPFIND reply in the shape nginx sends: the folder, then one entry per file.
-function multistatus (files) {
-  const folder = '<D:response><D:href>/</D:href><D:propstat><D:prop>' +
-    '<D:resourcetype><D:collection/></D:resourcetype></D:prop></D:propstat></D:response>'
-  const entries = files.map(({ name, size = 7, modified }) =>
-    `<D:response><D:href>/${encodeURIComponent(name)}</D:href><D:propstat><D:prop>` +
-    `<D:displayname>${name.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</D:displayname>` +
-    `<D:getcontentlength>${size}</D:getcontentlength>` +
-    `<D:getlastmodified>${modified.toUTCString()}</D:getlastmodified>` +
-    '<D:resourcetype/></D:prop></D:propstat></D:response>')
-  return `<D:multistatus xmlns:D="DAV:">${folder}${entries.join('')}</D:multistatus>`
-}
+const folderEntry = '<D:response><D:href>/</D:href><D:propstat><D:prop>' +
+  '<D:resourcetype><D:collection/></D:resourcetype></D:prop></D:propstat></D:response>'
+
+const fileEntry = ({ name, size = 7, modified }) =>
+  `<D:response><D:href>/${encodeURIComponent(name)}</D:href><D:propstat><D:prop>` +
+  `<D:displayname>${escapeXml(name)}</D:displayname>` +
+  `<D:getcontentlength>${size}</D:getcontentlength>` +
+  `<D:getlastmodified>${modified.toUTCString()}</D:getlastmodified>` +
+  '<D:resourcetype/></D:prop></D:propstat></D:response>'
+
+const addressOnlyEntry = (href) =>
+  `<D:response><D:href>${href}</D:href><D:propstat><D:prop><D:resourcetype/></D:prop></D:propstat></D:response>`
+
+const multistatusReply = (files, ...extraEntries) =>
+  `<D:multistatus xmlns:D="DAV:">${folderEntry}${files.map(fileEntry).join('')}${extraEntries.join('')}</D:multistatus>`
+
+const withNamespacePrefix = (xml, prefix) =>
+  xml.replace(/D:/g, `${prefix}:`).replace('xmlns:D=', `xmlns:${prefix}=`)
+
+// Ages and the page's 30-second refresh run off a frozen clock, but setTimeout stays real,
+// so letPendingWorkFinish() can still wait out fetch and the render that follows it.
+const frozenTimers = ['Date', 'setInterval', 'clearInterval']
+const letPendingWorkFinish = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+  vi.useFakeTimers({ toFake: frozenTimers })
   vi.setSystemTime(NOW)
 })
 
@@ -41,12 +50,20 @@ afterEach(() => {
 })
 
 describe('parseListing', () => {
-  let xml
+  let file, files, extraEntries, prefix, xml
 
-  const subject = () => parseListing(xml)
+  beforeEach(() => {
+    file = { name: 'a.pdf', modified: minutesAgo(3) }
+    files = [file]
+    extraEntries = []
+    prefix = 'D'
+    xml = undefined
+  })
 
-  context('with the reply nginx gave on the Pi', () => {
-    beforeEach(() => { xml = piReply })
+  const subject = () => parseListing(xml ?? withNamespacePrefix(multistatusReply(files, ...extraEntries), prefix))
+
+  context('with the reply from nginx', () => {
+    beforeEach(() => { xml = nginxReply })
 
     it('skips the folder itself', () => {
       expect(subject()).toHaveLength(1)
@@ -63,11 +80,11 @@ describe('parseListing', () => {
 
   context('with several files', () => {
     beforeEach(() => {
-      xml = multistatus([
+      files = [
         { name: 'older.pdf', modified: minutesAgo(180) },
         { name: 'newest.pdf', modified: minutesAgo(3) },
         { name: 'oldest.pdf', modified: minutesAgo(9 * 1440) }
-      ])
+      ]
     })
 
     it('lists them newest first', () => {
@@ -76,7 +93,7 @@ describe('parseListing', () => {
   })
 
   context('with a name that needs encoding', () => {
-    beforeEach(() => { xml = multistatus([{ name: 'scan & one.pdf', modified: minutesAgo(3) }]) })
+    beforeEach(() => { file.name = 'scan & one.pdf' })
 
     it('keeps the plain name for display', () => {
       expect(subject()[0].name).toBe('scan & one.pdf')
@@ -88,22 +105,15 @@ describe('parseListing', () => {
   })
 
   context('when one entry has no date', () => {
-    beforeEach(() => {
-      xml = multistatus([{ name: 'dated.pdf', modified: minutesAgo(9 * 1440) }])
-        .replace('</D:multistatus>', '<D:response><D:href>/undated.pdf</D:href>' +
-          '<D:propstat><D:prop><D:resourcetype/></D:prop></D:propstat></D:response></D:multistatus>')
-    })
+    beforeEach(() => { extraEntries = [addressOnlyEntry('/undated.pdf')] })
 
     it('lists it last', () => {
-      expect(subject().map((scan) => scan.name)).toEqual(['dated.pdf', 'undated.pdf'])
+      expect(subject().map((scan) => scan.name)).toEqual(['a.pdf', 'undated.pdf'])
     })
   })
 
   context('when an entry has no displayname or date', () => {
-    beforeEach(() => {
-      xml = '<D:multistatus xmlns:D="DAV:"><D:response><D:href>/scan%20one.pdf</D:href>' +
-        '<D:propstat><D:prop><D:resourcetype/></D:prop></D:propstat></D:response></D:multistatus>'
-    })
+    beforeEach(() => { files = []; extraEntries = [addressOnlyEntry('/scan%20one.pdf')] })
 
     it('takes the name from the address', () => {
       expect(subject()[0].name).toBe('scan one.pdf')
@@ -115,7 +125,7 @@ describe('parseListing', () => {
   })
 
   context('with a different namespace prefix', () => {
-    beforeEach(() => { xml = multistatus([{ name: 'a.pdf', modified: minutesAgo(3) }]).replace(/D:/g, 'd:').replace('xmlns:D=', 'xmlns:d=') })
+    beforeEach(() => { prefix = 'd' })
 
     it('still reads it, since only the DAV: namespace matters', () => {
       expect(subject().map((scan) => scan.name)).toEqual(['a.pdf'])
@@ -254,17 +264,20 @@ describe('renderScans', () => {
 describe('start', () => {
   let env, listing, deleteStatus, putStatus, visibility
 
-  const subject = async () => { await start(env); await flush() }
+  const subject = async () => { await start(env); await letPendingWorkFinish() }
   const list = () => document.getElementById('files')
   const status = () => document.getElementById('status')
   const reply = (code, body = null) => Promise.resolve(new Response(body, { status: code }))
   const requests = (method) => env.fetch.mock.calls.filter(([, options]) => options.method === method)
-  const clickDelete = async () => { list().querySelector('button.delete').click(); await flush() }
+  const clickDelete = async () => { list().querySelector('button.delete').click(); await letPendingWorkFinish() }
+
+  const loadTheRealPage = () => {
+    document.documentElement.innerHTML = indexHtml.replace(/^<!DOCTYPE html>\s*<html[^>]*>|<\/html>\s*$/g, '')
+  }
 
   beforeEach(() => {
-    // The real page, so these tests break if index.html and scans.js drift apart.
-    document.documentElement.innerHTML = indexHtml.replace(/^<!DOCTYPE html>\s*<html[^>]*>|<\/html>\s*$/g, '')
-    listing = multistatus([{ name: 'scan one.pdf', size: 225_935, modified: minutesAgo(3) }])
+    loadTheRealPage()
+    listing = multistatusReply([{ name: 'scan one.pdf', size: 225_935, modified: minutesAgo(3) }])
     deleteStatus = 204
     putStatus = 201
     visibility = 'visible'
@@ -275,16 +288,18 @@ describe('start', () => {
       setInterval,
       fetch: vi.fn((url, { method }) => {
         if (method === 'PROPFIND') return reply(207, listing)
-        return reply(method === 'PUT' ? putStatus : deleteStatus)
+        if (method === 'PUT') return reply(putStatus)
+        if (deleteStatus === 204) listing = multistatusReply([])
+        return reply(deleteStatus)
       }),
       confirm: vi.fn(() => true),
       alert: vi.fn()
     }
   })
 
-  context('when the server lists a scan', () => {
-    beforeEach(subject)
+  justBeforeEach(subject)
 
+  context('when the server lists a scan', () => {
     it('sends PROPFIND with Depth: 1 to the root', () => {
       expect(env.fetch).toHaveBeenCalledWith('/', { method: 'PROPFIND', headers: { Depth: '1' } })
     })
@@ -298,7 +313,7 @@ describe('start', () => {
     })
 
     context('and a minute passes', () => {
-      beforeEach(() => vi.advanceTimersByTime(60_000))
+      justBeforeEach(() => vi.advanceTimersByTime(60_000))
 
       it('updates the age without asking the server again', () => {
         expect(list().querySelector('span.age').textContent).toBe('4 minutes ago')
@@ -308,7 +323,7 @@ describe('start', () => {
   })
 
   context('when the folder is empty', () => {
-    beforeEach(() => { listing = multistatus([]); return subject() })
+    beforeEach(() => { listing = multistatusReply([]) })
 
     it('says so', () => {
       expect(status().textContent).toBe('No files yet.')
@@ -316,10 +331,7 @@ describe('start', () => {
   })
 
   context('when the server answers with an error', () => {
-    beforeEach(() => {
-      env.fetch = vi.fn(() => reply(500))
-      return subject()
-    })
+    beforeEach(() => { env.fetch = vi.fn(() => reply(500)) })
 
     it('says what went wrong', () => {
       expect(status().textContent).toBe("Couldn't load the files (status 500).")
@@ -327,10 +339,7 @@ describe('start', () => {
   })
 
   context("when the server can't be reached", () => {
-    beforeEach(() => {
-      env.fetch = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')))
-      return subject()
-    })
+    beforeEach(() => { env.fetch = vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))) })
 
     it('says what went wrong', () => {
       expect(status().textContent).toBe("Couldn't load the files (Failed to fetch).")
@@ -341,13 +350,11 @@ describe('start', () => {
     const switchTo = async (state) => {
       visibility = state
       document.dispatchEvent(new Event('visibilitychange'))
-      await flush()
+      await letPendingWorkFinish()
     }
 
-    beforeEach(subject)
-
     it('reloads the list', async () => {
-      listing = multistatus([])
+      listing = multistatusReply([])
       await switchTo('visible')
       expect(status().textContent).toBe('No files yet.')
     })
@@ -358,7 +365,7 @@ describe('start', () => {
     })
 
     context('after a failed load', () => {
-      beforeEach(async () => {
+      justBeforeEach(async () => {
         env.fetch.mockImplementationOnce(() => reply(500))
         await switchTo('visible')
       })
@@ -371,18 +378,14 @@ describe('start', () => {
   })
 
   describe('clicking delete', () => {
-    beforeEach(subject)
+    justBeforeEach(clickDelete)
 
-    it('asks first, naming the file', async () => {
-      await clickDelete()
+    it('asks first, naming the file', () => {
       expect(env.confirm).toHaveBeenCalledWith('Delete scan one.pdf?')
     })
 
     context('when cancelled', () => {
-      beforeEach(async () => {
-        env.confirm.mockReturnValue(false)
-        await clickDelete()
-      })
+      beforeEach(() => env.confirm.mockReturnValue(false))
 
       it('deletes nothing', () => {
         expect(requests('DELETE')).toHaveLength(0)
@@ -390,11 +393,6 @@ describe('start', () => {
     })
 
     context('when confirmed', () => {
-      beforeEach(async () => {
-        listing = multistatus([])
-        await clickDelete()
-      })
-
       it("sends DELETE to the scan's encoded address", () => {
         expect(env.fetch).toHaveBeenCalledWith('/scan%20one.pdf', { method: 'DELETE' })
       })
@@ -409,10 +407,7 @@ describe('start', () => {
     })
 
     context('when the server refuses (for example, locked in Finder)', () => {
-      beforeEach(async () => {
-        deleteStatus = 423
-        await clickDelete()
-      })
+      beforeEach(() => { deleteStatus = 423 })
 
       it('says the delete failed', () => {
         expect(env.alert).toHaveBeenCalledWith('Delete failed.')
@@ -424,10 +419,9 @@ describe('start', () => {
     })
 
     context("when the server can't be reached", () => {
-      beforeEach(async () => {
+      beforeEach(() => {
         env.fetch.mockImplementation((url, { method }) =>
           method === 'PROPFIND' ? reply(207, listing) : Promise.reject(new TypeError('Failed to fetch')))
-        await clickDelete()
       })
 
       it('says the delete failed', () => {
@@ -436,10 +430,7 @@ describe('start', () => {
     })
 
     context('when someone else already deleted it', () => {
-      beforeEach(async () => {
-        deleteStatus = 404
-        await clickDelete()
-      })
+      beforeEach(() => { deleteStatus = 404 })
 
       it("doesn't complain, since it's gone either way", () => {
         expect(env.alert).not.toHaveBeenCalled()
@@ -448,10 +439,9 @@ describe('start', () => {
   })
 
   context('clicking somewhere other than a delete button', () => {
-    beforeEach(async () => {
-      await subject()
+    justBeforeEach(async () => {
       list().querySelector('span.age').click()
-      await flush()
+      await letPendingWorkFinish()
     })
 
     it('does nothing', () => {
@@ -470,14 +460,11 @@ describe('start', () => {
     const drop = async () => {
       const event = dragEvent('drop', { dataTransfer: { files } })
       document.dispatchEvent(event)
-      await flush()
+      await letPendingWorkFinish()
       return event
     }
 
-    beforeEach(async () => {
-      files = [file('sample.png')]
-      await subject()
-    })
+    beforeEach(() => { files = [file('sample.png')] })
 
     it('takes the drop instead of letting the browser open the file', async () => {
       expect((await drop()).defaultPrevented).toBe(true)
@@ -586,7 +573,7 @@ describe('start', () => {
     context('when nothing usable is dropped', () => {
       it('does nothing', async () => {
         document.dispatchEvent(dragEvent('drop'))
-        await flush()
+        await letPendingWorkFinish()
         expect(requests('PUT')).toHaveLength(0)
         expect(requests('PROPFIND')).toHaveLength(1)
       })
@@ -595,7 +582,7 @@ describe('start', () => {
     describe('the outline while dragging', () => {
       const dropping = () => document.body.classList.contains('dropping')
 
-      beforeEach(() => document.dispatchEvent(dragEvent('dragover')))
+      justBeforeEach(() => document.dispatchEvent(dragEvent('dragover')))
 
       it('shows over the page', () => {
         expect(dropping()).toBe(true)
@@ -621,8 +608,6 @@ describe('start', () => {
   describe('the upload button', () => {
     const picker = () => document.getElementById('upload')
 
-    beforeEach(subject)
-
     it('opens the file picker', () => {
       const click = vi.spyOn(picker(), 'click').mockImplementation(() => {})
       document.getElementById('upload-button').click()
@@ -633,7 +618,7 @@ describe('start', () => {
       const pick = async (files) => {
         Object.defineProperty(picker(), 'files', { configurable: true, value: files })
         picker().dispatchEvent(new Event('change'))
-        await flush()
+        await letPendingWorkFinish()
       }
 
       it('uploads them', async () => {
