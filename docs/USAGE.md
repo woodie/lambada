@@ -90,9 +90,18 @@ and delete files. Renaming and making folders aren't supported.
 
 ## Native clients
 
+A browser makes you click **Keep** on every download, and Finder or File
+Explorer has to be connected to the Pi before you can use it.
 [Zouk](https://github.com/woodie/zouk) (for macOS) and
-[Huck](https://github.com/woodie/huck) (for Windows)
-are native apps that optimize the experience of downloading scans.
+[Huck](https://github.com/woodie/huck) (for Windows) skip both: type the
+Pi's address once, and every file shows up with a preview. Right-click a
+file to:
+
+- **Download and Open:** save it where you choose, under a name you choose
+  (rather than `1791851911.pdf`), then open it.
+- **Download to…:** the same, without opening it.
+- **Fast Download:** save it straight to your Downloads folder.
+- **Move to Trash:** delete it from the Pi.
 
 ## Good to know
 
