@@ -15,6 +15,8 @@ long ago it arrived, newest first:
 - **Download:** click a file's name. Browsers warn about downloads over plain
   HTTP (lambada runs on your home network, without HTTPS), so expect to
   click "Keep" once per download.
+<img width="321" alt="Insecure download" src="keep.png">
+
 - **Delete:** click the trash can next to the file, then confirm.
 - **Upload:** drag files from your desktop onto the page, or click
   **upload files** and pick them. Each file can be up to 25 MB. If a file
