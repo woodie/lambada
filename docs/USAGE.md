@@ -50,18 +50,23 @@ any other disk.
 
 ## On Windows: File Explorer (Map network drive)
 
-Windows can open the folder as a network drive, with a letter of its own.
-It uses Windows' built-in WebDAV support (the WebClient service), which is
-included in Windows 10 and 11.
+Windows can open the folder as a network drive, with a letter of its own,
+using the WebDAV support built into Windows 10 and 11.
 
-1. Open **File Explorer**, right-click **This PC**, and choose
-   **Map network drive…** (in Windows 11, it may be under **Show more
-   options**).
-2. Pick a drive letter, and for **Folder** type the Pi's address, for
-   example `http://10.0.1.111/`. Tick **Reconnect at sign-in** if you'd like
-   it back every time. Leave **Connect using different credentials**
-   unticked, since there's no login.
-3. Click **Finish**. The folder opens as a new drive under This PC.
+In File Explorer, right-click **This PC** and choose **Map network drive…**.
+Pick a drive letter, type the Pi's address as the **Folder**, and click
+**Finish**. Tick **Reconnect at sign-in** if you'd like it back every time,
+and leave **Connect using different credentials** unticked, since there's
+no login.
+
+<img height="405" alt="This PC's right-click menu" src="map-menu.png"><img
+     height="405" alt="Map Network Drive, with the Pi's address" src="map-drive.png">
+
+The folder opens in File Explorer and stays under **This PC** as a new
+drive. Windows labels it **DavWWWRoot**, its name for the top of a web
+folder.
+
+<img height="235" alt="The folder in File Explorer" src="explorer.png">
 
 Drag files out to copy them to your PC, or drag files in to upload them (up
 to 25 MB each). Deleting a file there deletes it from the Pi right away; it
@@ -69,9 +74,9 @@ doesn't go to the Recycle Bin. Renaming files and making folders aren't
 supported. To remove the drive, right-click it under This PC and choose
 **Disconnect**.
 
-If Windows says it can't find or reach the folder, the WebClient service is
-probably stopped: open **Services**, find **WebClient**, set its startup
-type to **Automatic**, and click **Start**. Then try again.
+If Windows says it can't reach the folder, check the address first, then
+check that the WebClient service is running: open **Services**, find
+**WebClient**, set its startup type to **Automatic**, and click **Start**.
 
 ## Any WebDAV client
 
