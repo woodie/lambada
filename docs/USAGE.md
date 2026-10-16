@@ -83,10 +83,10 @@ check that the WebClient service is running: open **Services**, find
 
 ## Any WebDAV client
 
-lambada's folder is standard WebDAV at the server's address, with no
-login, so any app that speaks WebDAV can connect to it: point it at the
-address (for example `http://10.0.1.111/`) and choose guest or anonymous
-access if it asks. You can list, download, upload (up to 25 MB, top-level folder only)
+The folder is standard WebDAV at the server's address, with no login, so any
+app that speaks WebDAV can connect to it: point it at the address (for
+example `http://10.0.1.111/`) and choose guest or anonymous access if it
+asks. You can list, download, upload (up to 25 MB, top-level folder only)
 and delete files. Renaming and making folders aren't supported.
 
 ## Native clients

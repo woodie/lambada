@@ -5,8 +5,9 @@
 [![Release](https://img.shields.io/github/v/release/woodie/lambada.svg)](https://github.com/woodie/lambada/releases/latest)
 [![License](https://img.shields.io/github/license/woodie/lambada.svg)](LICENSE)
 
-Have an old scanner/printer that can only send scans by e-mail? lambada
-gives it somewhere to send them, and serves the scans on your home network.
+Have an old scanner/printer that can only send scans by e-mail? The lambada
+scan server gives it somewhere to send them, and serves the scans on your
+home network.
 
 <img width="193" height="226" alt="A scanner" src="docs/hp_scanner.png" /><img
      width="161" height="117" alt="A Raspberry Pi" src="docs/raspberry_pi.png" />&nbsp;&nbsp;<img
@@ -15,20 +16,21 @@ gives it somewhere to send them, and serves the scans on your home network.
 <br>
 Plenty of good scanners and printers get thrown out once scan-to-e-mail
 stops working. Mail services now want a secure sign-in that old firmware
-can't do, and manufacturers don't update firmware that old. lambada accepts
-mail without a sign-in, on your home network only, so a scanner that can
-still send a scan by e-mail stays useful for years. It runs fine on an old
-Raspberry Pi, even a Pi Zero.
+can't do, and manufacturers don't update firmware that old. The server
+accepts mail without a sign-in, on your home network only, so a scanner that
+can still send a scan by e-mail stays useful for years. It runs fine on an
+old Raspberry Pi, even a Pi Zero.
 
 ## How it works
 
-lambada has two parts that share one folder, `/srv/lambada/attachments`:
+The lambada scan server has two parts that share one folder,
+`/srv/lambada/attachments`:
 
-- **`lambada`**, the one program this repo builds, is a small mail server.
-  The scanner e-mails a scan to it, and lambada saves the attached file.
-  Each time a scan arrives, scans older than a day are deleted. Files you
-  upload stay until someone deletes them.
-- **nginx** serves the folder over WebDAV, using
+- **The `lambada` program**, the one thing this repo builds, is a small mail
+  server. The scanner e-mails a scan to it, and lambada saves the attached
+  file. Each time a scan arrives, scans older than a day are deleted. Files
+  you upload stay until someone deletes them.
+- **The nginx web server** serves the folder over WebDAV, using
   [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser gets
   a page listing every file with its name, size and age, where you can
   download, upload and delete. Finder, File Explorer and other WebDAV apps
@@ -78,7 +80,7 @@ and find its e-mail or SMTP settings:
 - Turn on sending e-mail directly from the scanner.
 - Set the **SMTP Gateway** (or SMTP server) to your server's IP address.
 - Set the **SMTP Port** to `25`.
-- Leave login, SSL and TLS off. lambada accepts mail from anyone on your
+- Leave login, SSL and TLS off. The server accepts mail from anyone on your
   network, so no account is needed.
 - The sender doesn't matter: the "From" address, display name and default
   subject can be anything.

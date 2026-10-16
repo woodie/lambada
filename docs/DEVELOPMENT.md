@@ -13,10 +13,10 @@ spec/webdav/        tests of the real nginx config plus a real lambada
 scripts/            dev helpers: `make seed` and `npm run serve`
 ```
 
-`lambada` defaults to `./attachments` (created automatically), so a plain
-`make build && ./lambada` from the repo root works with no setup. Under
-systemd, `LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments` points it at the
-folder nginx serves.
+By default, `lambada` uses `./attachments` (created automatically), so a
+plain `make build && ./lambada` from the repo root works with no setup.
+Under systemd, `LAMBADA_ATTACHMENTS_DIR=/srv/lambada/attachments` points it
+at the folder nginx serves.
 
 ## Configuration
 
@@ -49,9 +49,9 @@ back) counts as a scan.
 - a browser's plain `GET /` gets the scan page from `/srv/lambada/public/`,
   served at `/.lambada/` (hidden, so never listed)
 
-nginx runs as `www-data`, so the folder needs to be writable by other users;
-`make install` does `chmod o+w` on it. Uploaded files are created readable
-by everyone.
+Since nginx runs as `www-data`, the folder needs to be writable by other
+users; `make install` does `chmod o+w` on it. Uploaded files are created
+readable by everyone.
 
 Check the listing on the server:
 
@@ -105,9 +105,10 @@ directly, as CI does.
 The page is plain TypeScript with no framework: `src/main.ts` reads the
 WebDAV listing and renders it like a Finder list (name, size, age, plus a
 delete button), and uploads with `PUT`, from the "upload files" button or
-files dropped on the page. nginx sends the page's files with
-`Cache-Control: no-cache`, so browsers pick up an update on the next load. It checks nginx's 25 MB upload limit first so it
-can say why, and asks before replacing a file with the same name. It uses
+files dropped on the page. The nginx config sends the page's files with
+`Cache-Control: no-cache`, so browsers pick up an update on the next load.
+It checks nginx's 25 MB upload limit first so it can say why, and asks
+before replacing a file with the same name. It uses
 [humane-ts](https://github.com/woodie/humane-ts) for sizes and ages. Vite
 bundles it, with humane-ts, into one minified IIFE, `public/main.js`, and
 `index.html` calls `Lambada.start()`. After changing `src/` or updating
