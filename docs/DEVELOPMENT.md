@@ -53,7 +53,7 @@ nginx runs as `www-data`, so the folder needs to be writable by other users;
 `make install` does `chmod o+w` on it. Uploaded files are created readable
 by everyone.
 
-Check the listing on the Pi:
+Check the listing on the server:
 
 ```bash
 curl -X PROPFIND -H "Depth: 1" http://localhost/
@@ -93,10 +93,10 @@ its paths and port swapped) plus a real `lambada` against a temp folder:
 listing, download, upload, delete, locking, every refused request, Finder's
 hidden files, and a scan emailed over SMTP, including which files cleanup
 removes. `spec/webdav/fixtures/propfind-pi.xml` is a real listing recorded
-from the Pi.
+from a running server.
 
-On a Mac, `make test-webdav` runs them in a Debian container with the Pi's
-nginx packages (Docker Desktop). On Linux with `nginx` and
+On a Mac, `make test-webdav` runs them in a Debian container with the
+server's nginx packages (Docker Desktop). On Linux with `nginx` and
 `libnginx-mod-http-dav-ext` installed, `npm run test-webdav` runs them
 directly, as CI does.
 
@@ -112,7 +112,8 @@ can say why, and asks before replacing a file with the same name. It uses
 bundles it, with humane-ts, into one minified IIFE, `public/main.js`, and
 `index.html` calls `Lambada.start()`. After changing `src/` or updating
 humane-ts, run `npm run build` and commit `public/main.js`; CI fails if it's
-out of date. The Pi only ever gets the built file, so it never needs npm.
+out of date. The server only ever gets the built file, so it never needs
+npm.
 
 Icons are [Bootstrap Icons](https://icons.getbootstrap.com) (MIT, license in
 `public/bootstrap-icons-LICENSE.txt`): `src/icons.ts` imports the few SVGs
@@ -122,7 +123,7 @@ import its `filetype-*.svg` there and add it to the table.
 
 ```bash
 make seed        # a few test PDFs in ./scans-dev, only if it's empty
-make docker-run  # seeds, then the Pi's nginx setup in Docker at http://localhost:8080/
+make docker-run  # seeds, then the server's nginx setup in Docker at http://localhost:8080/
 npm run serve    # or a small Node stand-in, no Docker, at http://localhost:8000/
 ```
 
@@ -138,7 +139,7 @@ swaks --server localhost:2525 --from sender@example.com --to rcpt@example.com \
   --header "Subject: Test" --attach @/path/to/file.pdf
 ```
 
-## Updating the Pi
+## Updating the server
 
 ```bash
 cd ~/workspace/lambada
@@ -152,7 +153,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### Upgrading from lambada-mta and lambada-web (2.x)
 
-Before 3.0, this repo built two services. To move a Pi over, after
+Before 3.0, this repo built two services. To move a server over, after
 `git pull` and `make install`:
 
 ```bash

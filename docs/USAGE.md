@@ -1,13 +1,13 @@
 # Using lambada
 
 Everything lambada has received, plus anything you've uploaded, is in one
-folder on the Pi. You can reach it from any computer or phone on your home
-network at the Pi's address, for example `http://10.0.1.111/` (or the Pi's
-name, if your network has one for it). No login is needed.
+folder on the server. You can reach it from any computer or phone on your
+home network at the server's address, for example `http://10.0.1.111/` (or
+the server's name, if your network has one for it). No login is needed.
 
 ## In a web browser
 
-Open the Pi's address. You'll see every file with its name, size and how
+Open the server's address. You'll see every file with its name, size and how
 long ago it arrived, newest first:
 
 <img width="460" alt="The file list in a browser" src="listing.png">
@@ -30,11 +30,12 @@ The page works on a phone too: tap a name to open the file, and use
 Finder can open the folder like a disk, which is handy for dragging several
 files in or out at once.
 
-In Finder, choose **Go → Connect to Server…** (⌘K), type the Pi's address,
-and click **Connect**. Finder warns that the connection is unsecured, which
-is expected for plain HTTP on your home network, so click **Connect** again.
+In Finder, choose **Go → Connect to Server…** (⌘K), type the server's
+address, and click **Connect**. Finder warns that the connection is
+unsecured, which is expected for plain HTTP on your home network, so click
+**Connect** again.
 
-<img height="337" alt="Connect to Server, with the Pi's address" src="connect.png"><img
+<img height="337" alt="Connect to Server, with the server's address" src="connect.png"><img
      height="337" alt="The Unsecured Connection warning" src="unsecure.png">
 
 Finder then asks how to connect. Since lambada has no accounts, choose
@@ -46,9 +47,9 @@ with previews of your scans, and shows up in the sidebar under
      height="197" alt="The folder in Finder" src="mount.png">
 
 Drag files out to copy them to your Mac, drag files in to upload them (up to
-25 MB each), or move a file to the Trash to delete it from the Pi. Renaming
-files and making folders aren't supported. When you're done, eject it like
-any other disk.
+25 MB each), or move a file to the Trash to delete it from the server.
+Renaming files and making folders aren't supported. When you're done, eject
+it like any other disk.
 
 ## On Windows: File Explorer (Map network drive)
 
@@ -56,13 +57,13 @@ Windows can open the folder as a network drive, with a letter of its own,
 using the WebDAV support built into Windows 10 and 11.
 
 In File Explorer, right-click **This PC** and choose **Map network drive…**.
-Pick a drive letter, type the Pi's address as the **Folder**, and click
+Pick a drive letter, type the server's address as the **Folder**, and click
 **Finish**. Tick **Reconnect at sign-in** if you'd like it back every time,
 and leave **Connect using different credentials** unticked, since there's
 no login.
 
 <img height="405" alt="This PC's right-click menu" src="map-menu.png"><img
-     height="405" alt="Map Network Drive, with the Pi's address" src="map-drive.png">
+     height="405" alt="Map Network Drive, with the server's address" src="map-drive.png">
 
 The folder opens in File Explorer and stays under **This PC** as a new
 drive. Windows labels it **DavWWWRoot**, its name for the top of a web
@@ -71,10 +72,10 @@ folder.
 <img height="235" alt="The folder in File Explorer" src="explorer.png">
 
 Drag files out to copy them to your PC, or drag files in to upload them (up
-to 25 MB each). Deleting a file there deletes it from the Pi right away; it
-doesn't go to the Recycle Bin. Renaming files and making folders aren't
-supported. To remove the drive, right-click it under This PC and choose
-**Disconnect**.
+to 25 MB each). Deleting a file there deletes it from the server right
+away; it doesn't go to the Recycle Bin. Renaming files and making folders
+aren't supported. To remove the drive, right-click it under This PC and
+choose **Disconnect**.
 
 If Windows says it can't reach the folder, check the address first, then
 check that the WebClient service is running: open **Services**, find
@@ -82,26 +83,26 @@ check that the WebClient service is running: open **Services**, find
 
 ## Any WebDAV client
 
-lambada's folder is standard WebDAV at the Pi's address, with no login, so
-any app that speaks WebDAV can connect to it: point it at the address (for
-example `http://10.0.1.111/`) and choose guest or anonymous access if it
-asks. You can list, download, upload (up to 25 MB, top-level folder only)
+lambada's folder is standard WebDAV at the server's address, with no
+login, so any app that speaks WebDAV can connect to it: point it at the
+address (for example `http://10.0.1.111/`) and choose guest or anonymous
+access if it asks. You can list, download, upload (up to 25 MB, top-level folder only)
 and delete files. Renaming and making folders aren't supported.
 
 ## Native clients
 
 A browser makes you click **Keep** on every download, and Finder or File
-Explorer has to be connected to the Pi before you can use it.
+Explorer has to be connected to the server before you can use it.
 [Zouk](https://github.com/woodie/zouk) (for macOS) and
 [Huck](https://github.com/woodie/huck) (for Windows) skip both: type the
-Pi's address once, and every file shows up with a preview. Right-click a
+server's address once, and every file shows up with a preview. Right-click a
 file to:
 
 - **Download and Open:** save it where you choose, under a name you choose
   (rather than `1791851911.pdf`), then open it.
 - **Download to…:** the same, without opening it.
 - **Fast Download:** save it straight to your Downloads folder.
-- **Move to Trash:** delete it from the Pi.
+- **Move to Trash:** delete it from the server.
 
 ## Good to know
 

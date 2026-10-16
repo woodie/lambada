@@ -5,45 +5,41 @@
 [![Release](https://img.shields.io/github/v/release/woodie/lambada.svg)](https://github.com/woodie/lambada/releases/latest)
 [![License](https://img.shields.io/github/license/woodie/lambada.svg)](LICENSE)
 
-Have an old Scanner/Printer that requires an open relay to e-mail out scans?
-Now you can serve up scanned documents on your home network.
+Have an old scanner/printer that can only send scans by e-mail? lambada
+gives it somewhere to send them, and serves the scans on your home network.
 
-<img width="193" height="226" alt="printer" src="docs/hp_scanner.png" /><img
-     width="161" height="117" alt="piv1" src="docs/raspberry_pi.png" />&nbsp;&nbsp;<img
-     width="345" height="188" alt="listing" src="docs/listing.png" />
+<img width="193" height="226" alt="A scanner" src="docs/hp_scanner.png" /><img
+     width="161" height="117" alt="A Raspberry Pi" src="docs/raspberry_pi.png" />&nbsp;&nbsp;<img
+     width="345" height="188" alt="The file list in a browser" src="docs/listing.png" />
 <br>
 <br>
-A lot of perfectly good scanners and printers end up in a landfill the
-day their cloud-email feature stops working -- usually because the auth
-method it depends on (an open relay, a now-revoked app password) quietly
-breaks somewhere upstream, and the manufacturer has no reason to fix
-firmware on hardware that old. If your printer can still email a scan
-to *somewhere*, lambada plus an SMTP open relay it trusts (its own,
-deliberately -- see Installation) is enough to keep it useful for years
-past the cloud feature's death, on hardware as small as a Pi Zero.
+Plenty of good scanners and printers get thrown out once scan-to-e-mail
+stops working. Mail services now want a secure sign-in that old firmware
+can't do, and manufacturers don't update firmware that old. lambada accepts
+mail without a sign-in, on your home network only, so a scanner that can
+still send a scan by e-mail stays useful for years. It runs fine on an old
+Raspberry Pi, even a Pi Zero.
 
 ## How it works
 
-Two pieces share one folder, `/srv/lambada/attachments`:
+lambada has two parts that share one folder, `/srv/lambada/attachments`:
 
-- **`lambada`** -- a minimal SMTP server, the one thing this repo builds.
-  The scanner emails a scan to the Pi; `lambada` decodes the attachment and
-  saves it with an epoch-based name (e.g. `1779867473.pdf`). Each time a
-  scan arrives, scans older than 24 hours are deleted. Only files named like
-  that (ten digits, `.pdf`) are ever deleted; anything else stays until
-  someone deletes it.
-- **nginx** -- serves the folder over WebDAV at `http://<pi>/`, using
-  [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser
-  gets a page listing each file like Finder's list view (name, size, age),
-  with download, upload and delete. WebDAV clients get the folder itself:
-  list, download, upload and delete.
+- **`lambada`**, the one program this repo builds, is a small mail server.
+  The scanner e-mails a scan to it, and lambada saves the attached file.
+  Each time a scan arrives, scans older than a day are deleted. Files you
+  upload stay until someone deletes them.
+- **nginx** serves the folder over WebDAV, using
+  [`service/lambada.nginx.conf`](service/lambada.nginx.conf). A browser gets
+  a page listing every file with its name, size and age, where you can
+  download, upload and delete. Finder, File Explorer and other WebDAV apps
+  can open the folder itself.
 
-The server uses WebDAV, so there are [several ways](docs/USAGE.md)
-to download scans.
+See [USAGE.md](docs/USAGE.md) for an overview of WebDAV clients to fetch scans.
 
 ## Installation
 
-On the Pi, with Go 1.26 or newer installed:
+These steps are for Raspberry Pi OS, or another Debian-based Linux, with
+Go 1.26 or newer installed. Run them on the server:
 
 ```bash
 sudo apt-get update
@@ -80,7 +76,7 @@ Open the scanner's own settings page (usually its IP address in a browser)
 and find its e-mail or SMTP settings:
 
 - Turn on sending e-mail directly from the scanner.
-- Set the **SMTP Gateway** (or SMTP server) to the IP address of your Pi.
+- Set the **SMTP Gateway** (or SMTP server) to your server's IP address.
 - Set the **SMTP Port** to `25`.
 - Leave login, SSL and TLS off. lambada accepts mail from anyone on your
   network, so no account is needed.
@@ -89,9 +85,10 @@ and find its e-mail or SMTP settings:
 - Add a contact to scan to, such as "Scans" at `scans@example.com`. The
   address is never used: the e-mail is never delivered anywhere, because
   lambada saves the attached scan and throws the rest of the message away.
-  So any address will do, and naming the contact after the Pi (for example
-  "Scans: 10.0.1.111") makes it easy to pick on the scanner's screen.
+  So any address will do, and naming the contact after the server (for
+  example "Scans: 10.0.1.111") makes it easy to pick on the scanner's
+  screen.
 
-Scan something to e-mail, then open `http://<pi>/` to see it. See
+Scan something to e-mail, then open `http://<server>/` to see it. See
 [DEVELOPMENT.md](docs/DEVELOPMENT.md) for updating, testing and
 troubleshooting.
