@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { justBeforeEach } from 'qvick'
+import { justBeforeEach } from 'penultimate'
 import { parseListing, age, renderScans, start } from '../../src/main.ts'
 import { fileIcon } from '../../src/icons.ts'
 
