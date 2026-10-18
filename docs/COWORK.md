@@ -33,15 +33,14 @@ has the rest. None of it is needed to work on the current code.
 - **The scan page is plain TypeScript, no framework** (`src/main.ts`),
   chosen over Vue and petite-vue to stay basic. Vite (library mode, the
   same setup as `netpress`) bundles it with humane-ts into one minified
-  IIFE, `public/main.js`, committed so the Pi needs no npm; CI checks it
-  matches `src/`. humane-ts is pinned to a git tag (`#v0.1.0`) until it's on
-  npm. Page files are addressed as `/.lambada/...`, since a relative URL
-  from `/` would land in the scans folder.
+  IIFE, `public/main.js`, committed so the server needs no npm; CI checks
+  it matches `src/`. humane-ts comes from npm (`^0.1.0`). Page files are
+  addressed as `/.lambada/...`, since a relative URL from `/` would land in
+  the scans folder.
 - **Tests:** Go uses `spec` + `expect` (RSpec-style tree; never a literal `/`
   in a test name, since `spec` and `gorderly` treat it as nesting). The
   page's tests (`spec/javascript`) keep `src/` at 100% coverage, using
-  `justBeforeEach` from `penultimate` (pinned to `#v0.1.0` until it's on
-  npm, like humane-ts).
+  `justBeforeEach` from `penultimate` (npm, `^0.1.1`).
   Lint is `neostandard` plus `tsc --noEmit`, like humane-ts.
   `spec/webdav` runs the real nginx config with a real lambada.
 
