@@ -39,6 +39,10 @@ has the rest. None of it is needed to work on the current code.
   the scans folder.
 - **Tests:** Go uses `spec` + `expect` (RSpec-style tree; never a literal `/`
   in a test name, since `spec` and `gorderly` treat it as nesting). The
+  suite aliases only the hooks it calls (`describe, beforeEach,
+  justBeforeEach := context, it.BeforeEach, it.JustBeforeEach`), with
+  `justBeforeEach` running the function under test after each context's
+  `beforeEach` sets up its scenario. The
   page's tests (`spec/javascript`) keep `src/` at 100% coverage, using
   `justBeforeEach` from `penultimate` (npm, `^0.1.1`).
   Lint is `neostandard` plus `tsc --noEmit`, like humane-ts.
