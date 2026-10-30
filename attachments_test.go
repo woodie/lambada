@@ -47,18 +47,18 @@ func TestAttachments(t *testing.T) {
 		beforeEach(func() { attachmentDir = t.TempDir() }) // stub implementation
 
 		describe("checkAttachmentDir", func() {
-			justBeforeEach(checkAttachmentDir)
-
 			context("when the path is missing", func() {
 				beforeEach(func() { attachmentDir = filepath.Join(t.TempDir(), "newdir") })
 
 				it("creates the directory", func() {
+					checkAttachmentDir()
 					expect(attachmentDir, t).To(BeADirectory())
 				})
 			})
 
 			context("when the path is a real directory", func() {
 				it("keeps the directory", func() {
+					checkAttachmentDir()
 					expect(attachmentDir, t).To(BeADirectory())
 				})
 			})
@@ -71,6 +71,7 @@ func TestAttachments(t *testing.T) {
 				})
 
 				it("keeps the link", func() {
+					checkAttachmentDir()
 					expect(attachmentDir, t).To(BeADirectory())
 				})
 			})

@@ -1,8 +1,9 @@
 # Why the tests use `justBeforeEach`
 
-lambada's tests follow one pattern. Each `context` sets up one scenario in a
-`beforeEach`, and the function under test runs once, in a `justBeforeEach`
-on the parent `describe`. The `it` blocks only check the result.
+When a `describe` has several `it` blocks that need the same call, each
+`context` sets up one scenario in a `beforeEach`, and the function under
+test runs once, in a `justBeforeEach` on the parent `describe`. The `it`
+blocks only check the result.
 
 ```go
 describe("processAttachments", func() {
@@ -38,19 +39,33 @@ set, so every context would test an empty message.
 `justBeforeEach` runs after every `beforeEach` at every level, right before
 the `it`. The scenario is fully set up by the time the function runs.
 
-Swapping any of the suite's four `justBeforeEach` calls for `beforeEach`
+Swapping any of the suite's three `justBeforeEach` calls for `beforeEach`
 fails tests:
 
 | `describe`           | Fails with `beforeEach` because                   |
 |----------------------|---------------------------------------------------|
-| `checkAttachmentDir` | it runs before the context picks the path         |
 | `cleanupOldFiles`    | it runs before the context ages the files         |
 | `processAttachments` | it runs before the context picks the message      |
 | `saveAttachment`     | it runs before the context picks the path         |
 
-## Why not call the function in each context instead
+## When to call the function in the `it` instead
 
-That works too, but repeats the call in every context. With `justBeforeEach`:
+`justBeforeEach` is only worth it when it saves repeating the call. If each
+`context` has a single `it`, the call goes in that `it`, as in
+`checkAttachmentDir`:
+
+```go
+context("when the path is missing", func() {
+	beforeEach(func() { attachmentDir = filepath.Join(t.TempDir(), "newdir") })
+
+	it("creates the directory", func() {
+		checkAttachmentDir()
+		expect(attachmentDir, t).To(BeADirectory())
+	})
+})
+```
+
+Once several `it` blocks need the same call, `justBeforeEach` helps:
 
 - The call is written once, so a change to its arguments is one edit.
 - A new case is a new `context` with one `beforeEach` that says what's

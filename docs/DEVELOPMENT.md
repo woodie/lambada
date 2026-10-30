@@ -81,7 +81,7 @@ Go needs `golangci-lint` (`brew install golangci-lint`) and `gorderly`
 on your `PATH`). Go tests use [`spec`](https://github.com/woodie/spec) and
 [`expect`](https://github.com/woodie/expect) for an RSpec-style
 `describe`/`context`/`it` tree. [JUSTBEFOREEACH.md](JUSTBEFOREEACH.md)
-explains why both test suites use `justBeforeEach`.
+explains when the test suites use `justBeforeEach`.
 
 `node_modules` holds platform-specific binaries. If you see "Cannot find
 module @rollup/rollup-\<platform\>", run `rm -rf node_modules
