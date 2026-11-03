@@ -35,16 +35,16 @@ address, and click **Connect**. Finder warns that the connection is
 unsecured, which is expected for plain HTTP on your home network, so click
 **Connect** again.
 
-<img height="337" alt="Connect to Server, with the server's address" src="connect.png"><img
-     height="337" alt="The Unsecured Connection warning" src="unsecure.png">
+<img align="top" height="337" alt="Connect to Server" src="connect.png"><img
+     align="top" height="337" alt="Unsecured Connection" src="unsecure.png">
 
 Finder then asks how to connect. Since lambada has no accounts, choose
 **Guest** and click **Connect**. The folder opens in a new Finder window,
 with previews of your scans, and shows up in the sidebar under
 **Locations** like a disk.
 
-<img height="197" alt="Connect As: Guest" src="guest.png"><img
-     height="197" alt="The folder in Finder" src="mount.png">
+<img align="top" height="197" alt="Connect As: Guest" src="guest.png"><img
+     align="top" height="197" alt="The folder in Finder" src="mount.png">
 
 Drag files out to copy them to your Mac, drag files in to upload them (up to
 25 MB each), or move a file to the Trash to delete it from the server.
