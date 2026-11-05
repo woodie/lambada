@@ -35,8 +35,8 @@ address, and click **Connect**. Finder warns that the connection is
 unsecured, which is expected for plain HTTP on your home network, so click
 **Connect** again.
 
-<img align="top" height="337" alt="Connect to Server" src="connect.png"><img
-     align="top" height="337" alt="Unsecured Connection" src="unsecure.png">
+<img align="top" width="441" alt="Connect to Server" src="connect.png"><img
+     align="top" width="261" alt="Unsecured Connection" src="unsecure.png">
 
 Finder then asks how to connect. Since lambada has no accounts, choose
 **Guest** and click **Connect**. The folder opens in a new Finder window,
